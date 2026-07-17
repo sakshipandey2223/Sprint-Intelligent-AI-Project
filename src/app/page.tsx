@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 type AuthState = 'idle' | 'scanning' | 'verifying' | 'success' | 'error';
 
@@ -183,13 +183,13 @@ export default function Home() {
             <div className="brand">
               <div className="brand-mark">S</div>
               <div>
-                <div className="brand-name">SENTRY</div>
-                <div className="brand-tag">WHITE&nbsp;HAT&nbsp;ACCESS&nbsp;LAYER</div>
+                <div className="brand-name">SPRINT INTEL</div>
+                <div className="brand-tag">AG-UC-0010 // ANALYTICAL VIEWPORT</div>
               </div>
             </div>
             <div className="status-pill">
               <span className="status-dot" />
-              LINK SECURE
+              TELEMETRY LIVE
             </div>
           </div>
 
@@ -197,10 +197,10 @@ export default function Home() {
           <div className="stage-mid">
             <div>
               <div className="headline">
-                Access, guarded<br />by <span className="accent">design</span>, not <span className="accent2">assumption</span>.
+                Sprint health,<br />optimized by <span className="accent">data</span>, not <span className="accent2">guesswork</span>.
               </div>
               <p className="sub mt-3">
-                Every session on Sentry is encrypted end-to-end and verified against known-good signatures before it ever reaches the vault. Nothing sneaky. Just disciplined security.
+                Every sprint cycle is aggregated, evaluated, and verified by our AI risk model. Pre-empt velocity decays and resource overcapacity dynamically.
               </p>
             </div>
 
@@ -208,17 +208,17 @@ export default function Home() {
             <div className="term">
               {terminalRows >= 1 && (
                 <div className="term-row">
-                  <span className="tag">[boot]</span> initializing secure channel<span className="ok">... done</span>
+                  <span className="tag">[boot]</span> initializing telemetry channel<span className="ok">... done</span>
                 </div>
               )}
               {terminalRows >= 2 && (
                 <div className="term-row">
-                  <span className="tag">[tls]</span> handshake verified <span className="ok">✓ 256-bit</span>
+                  <span className="tag">[db]</span> connection verified <span className="ok">✓ sqlite</span>
                 </div>
               )}
               {terminalRows >= 3 && (
                 <div className="term-row">
-                  <span className="tag">[scan]</span> zero known vulnerabilities <span className="ok">✓ clear</span>
+                  <span className="tag">[ai]</span> predictive engine ready <span className="ok">✓ clear</span>
                 </div>
               )}
               {terminalRows >= 4 && (
@@ -232,16 +232,16 @@ export default function Home() {
           {/* Footer Metrics */}
           <div className="stage-foot">
             <div>
-              <div className="metric-label">ENCRYPTION</div>
-              <div className="metric-value teal">AES-256</div>
+              <div className="metric-label">DATABASE</div>
+              <div className="metric-value teal">SQLITE</div>
             </div>
             <div>
-              <div className="metric-label">NODES MONITORED</div>
-              <div className="metric-value">1,204</div>
+              <div className="metric-label">ACTIVE SPRINT</div>
+              <div className="metric-value">SPRINT 10</div>
             </div>
             <div>
-              <div className="metric-label">UPTIME</div>
-              <div className="metric-value">99.98%</div>
+              <div className="metric-label">AI PREDICT PROBABILITY</div>
+              <div className="metric-value">94.2%</div>
             </div>
           </div>
         </section>
@@ -274,7 +274,7 @@ export default function Home() {
                 <span className="font-mono text-xs font-bold tracking-widest text-[#dbe6ef] block">
                   {authState === 'scanning' && 'SCANNING VERIFICATION INDEX...'}
                   {authState === 'verifying' && 'ESTABLISHING HANDSHAKE...'}
-                  {authState === 'success' && 'ACCESS AUTORIZED'}
+                  {authState === 'success' && 'ACCESS AUTHORIZED'}
                 </span>
 
                 <div className="w-40 h-1 bg-[#10161f] rounded-full mt-4 overflow-hidden relative border border-slate-800">
@@ -289,16 +289,16 @@ export default function Home() {
                 <span className="font-mono text-[8px] text-[#7d90a3] mt-2 block">
                   {authState === 'scanning' && `Parsing security parameters: ${progressVal}%`}
                   {authState === 'verifying' && 'Mapping telemetry context graphs...'}
-                  {authState === 'success' && 'Redirecting to executive workspace...'}
+                  {authState === 'success' && 'Redirecting to dashboard viewport...'}
                 </span>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="panel-eyebrow">Secure sign-in</div>
-          <h1 className="panel-title">Welcome back, operator</h1>
+          <div className="panel-eyebrow">Workspace access</div>
+          <h1 className="panel-title">Welcome back, manager</h1>
           <p className="panel-sub">
-            Sign in with your verified credentials. Sessions are audited, never sold, and can be revoked by you at any time.
+            Sign in with your verified credentials. Live sprint tracking is protected by encrypted network pipelines.
           </p>
 
           <form onSubmit={handleLoginSubmit} autoComplete="off">
@@ -385,8 +385,8 @@ export default function Home() {
 
             <button type="submit" className="btn-primary">
               <span className="shine" />
-              Authenticate
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" stroke-linecap="round" stroke-linejoin="round">
+              Authenticate Workspace
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 12h14" />
                 <path d="m13 6 6 6-6 6" />
               </svg>
@@ -400,14 +400,14 @@ export default function Home() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2a10 10 0 0 0-3.16 19.5c.5.1.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.28.1-2.66 0 0 .84-.27 2.75 1.02a9.4 9.4 0 0 1 5 0c1.9-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.41.1 2.66.64.7 1.03 1.59 1.03 2.68 0 3.84-2.35 4.68-4.58 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
               </svg>
-              Passkey
+              GitHub Enterprise
             </button>
             <button className="alt-btn" type="button">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="5" y="2" width="14" height="20" rx="2" />
                 <path d="M12 18h.01" />
               </svg>
-              Authenticator
+              Azure AD SSO
             </button>
           </div>
 
@@ -416,25 +416,25 @@ export default function Home() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 2 3 6v6c0 5 4 8.5 9 10 5-1.5 9-5 9-10V6l-9-4Z" />
               </svg>
-              AUDITED
+              DB PERSISTED
             </div>
             <div className="trust-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="11" width="18" height="10" rx="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              ENCRYPTED
+              AI ASSISTED
             </div>
             <div className="trust-item">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M20 6 9 17l-5-5" />
               </svg>
-              NO DATA SOLD
+              LIVE SYNC
             </div>
           </div>
 
           <p className="panel-footer">
-            New operator? <a href="#" className="link">Request an invitation</a>
+            New manager? <a href="#" className="link">Request dashboard invite</a>
           </p>
         </section>
 
