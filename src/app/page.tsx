@@ -183,7 +183,7 @@ export default function Home() {
             <div className="brand">
               <div className="brand-mark">S</div>
               <div>
-                <div className="brand-name">SENTRY // Sprint - Intelligent AI</div>
+                <div className="brand-name">Sprint - Intelligent AI</div>
                 <div className="brand-tag">WHITE&nbsp;HAT&nbsp;ACCESS&nbsp;LAYER</div>
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function Home() {
                 Access, guarded<br />by <span className="accent">design</span>, not <span className="accent2">assumption</span>.
               </div>
               <p className="sub mt-3">
-                Every session on Sentry is encrypted end-to-end and verified against known-good signatures before it ever reaches the vault. Nothing sneaky. Just disciplined security.
+                Every session on Sprint - Intelligent AI is encrypted end-to-end and verified against known-good signatures before it ever reaches the vault. Nothing sneaky. Just disciplined security.
               </p>
             </div>
 
@@ -319,7 +319,7 @@ export default function Home() {
             <div className="field">
               <label htmlFor="handle">Operator ID / Email</label>
               <div className="input-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 4h16v16H4z" opacity="0" />
                   <path d="M22 6 12 13 2 6" />
                   <path d="M2 6h20v12H2z" />
@@ -341,7 +341,7 @@ export default function Home() {
             <div className="field">
               <label htmlFor="pass">Passphrase</label>
               <div className="input-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="3" y="11" width="18" height="10" rx="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
