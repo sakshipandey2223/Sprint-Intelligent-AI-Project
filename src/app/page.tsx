@@ -36,7 +36,7 @@ export default function Home() {
     setLeftMatrix(createMatrix());
     setRightMatrix(createMatrix());
 
-    // Periodically pulse/flicker the dots to make them feel alive
+    // Periodically pulse/flicker the dots
     const interval = setInterval(() => {
       setLeftMatrix(createMatrix());
       setRightMatrix(createMatrix());
@@ -104,77 +104,128 @@ export default function Home() {
         <div className="w-[500px] h-[350px] rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-600/10 blur-[130px] opacity-75" />
       </div>
 
+      {/* ── MOVING SMALL DESKTOP WIDGETS IN EMPTY SPACE ── */}
+      {/* Top Left Floating Desktop */}
+      <motion.div
+        animate={{ 
+          y: [0, -18, 0],
+          x: [0, 12, 0],
+          rotate: [0, 2, 0]
+        }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 7, 
+          ease: "easeInOut" 
+        }}
+        className="absolute top-12 left-16 w-32 h-32 rounded-xl border border-cyan-500/40 bg-slate-950/80 shadow-[0_0_20px_rgba(0,229,255,0.25)] overflow-hidden pointer-events-none z-10 opacity-70 hidden md:block"
+      >
+        <img 
+          src="/mini_cyber_desktop.jpg" 
+          alt="Floating Workspace" 
+          className="w-full h-full object-cover mix-blend-screen"
+        />
+        <div className="absolute bottom-1.5 left-2 text-[8px] font-mono text-cyan-400">WS-NODE-01</div>
+      </motion.div>
+
+      {/* Bottom Right Floating Desktop */}
+      <motion.div
+        animate={{ 
+          y: [0, 15, 0],
+          x: [0, -10, 0],
+          rotate: [0, -2, 0]
+        }}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 8, 
+          ease: "easeInOut",
+          delay: 1
+        }}
+        className="absolute bottom-12 right-16 w-32 h-32 rounded-xl border border-cyan-500/40 bg-slate-950/80 shadow-[0_0_20px_rgba(0,229,255,0.25)] overflow-hidden pointer-events-none z-10 opacity-70 hidden md:block"
+      >
+        <img 
+          src="/mini_cyber_desktop.jpg" 
+          alt="Floating Workspace" 
+          className="w-full h-full object-cover mix-blend-screen"
+        />
+        <div className="absolute bottom-1.5 left-2 text-[8px] font-mono text-cyan-400">WS-NODE-02</div>
+      </motion.div>
+
       {/* ── CENTRALIZED CYBERNETIC LOGIN GATEPORTAL ── */}
       <div className="relative z-10 flex items-center justify-center w-full max-w-5xl px-4 py-8">
         
-        {/* ── LEFT HAND CIRCUITS & MATRIX DOTS ── */}
-        <div className="hidden md:flex items-center absolute right-[50%] mr-[215px] z-10 pointer-events-none">
-          {/* Digital Dot Matrix */}
-          <div className="grid grid-cols-6 gap-1 opacity-70 pr-8">
-            {leftMatrix.map((row, rIdx) => 
-              row.map((active, cIdx) => (
-                <span 
-                  key={`${rIdx}-${cIdx}`} 
-                  className={`w-1.5 h-1.5 rounded-sm transition-all duration-300 ${
-                    active ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff]' : 'bg-cyan-950/20'
-                  }`}
-                />
-              ))
-            )}
+        {/* ── BACKGROUND LAYER FOR CIRCUITS & MATRIX DOTS ── */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
+          
+          {/* Left Hand Circuit & Dots */}
+          <div className="hidden md:flex items-center absolute right-[50%] mr-[215px]">
+            {/* Digital Dot Matrix */}
+            <div className="grid grid-cols-6 gap-1 opacity-50 pr-8">
+              {leftMatrix.map((row, rIdx) => 
+                row.map((active, cIdx) => (
+                  <span 
+                    key={`${rIdx}-${cIdx}`} 
+                    className={`w-1.5 h-1.5 rounded-sm transition-all duration-300 ${
+                      active ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff]' : 'bg-cyan-950/20'
+                    }`}
+                  />
+                ))
+              )}
+            </div>
+
+            {/* Circuit Trace SVG */}
+            <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
+              {/* Top Branch */}
+              <path d="M 0 50 L 120 50 L 180 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              <circle cx="0" cy="50" r="3" fill="#00e5ff" />
+              {/* Middle Direct Branch */}
+              <path d="M 40 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
+              {/* Bottom Branch */}
+              <path d="M 0 230 L 120 230 L 180 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              <circle cx="0" cy="230" r="3" fill="#00e5ff" />
+            </svg>
           </div>
 
-          {/* Circuit Trace SVG */}
-          <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
-            {/* Top Branch */}
-            <path d="M 0 50 L 120 50 L 180 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
-            <circle cx="0" cy="50" r="3" fill="#00e5ff" className="animate-pulse" />
-            {/* Middle Direct Branch */}
-            <path d="M 40 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
-            {/* Bottom Branch */}
-            <path d="M 0 230 L 120 230 L 180 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
-            <circle cx="0" cy="230" r="3" fill="#00e5ff" className="animate-pulse" />
-          </svg>
-        </div>
+          {/* Right Hand Circuit & Dots */}
+          <div className="hidden md:flex items-center absolute left-[50%] ml-[215px]">
+            {/* Circuit Trace SVG */}
+            <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
+              {/* Top Branch */}
+              <path d="M 220 50 L 100 50 L 40 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              <circle cx="220" cy="50" r="3" fill="#00e5ff" />
+              {/* Middle Direct Branch */}
+              <path d="M 180 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
+              {/* Bottom Branch */}
+              <path d="M 220 230 L 100 230 L 40 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              <circle cx="220" cy="230" r="3" fill="#00e5ff" />
+            </svg>
 
-        {/* ── RIGHT HAND CIRCUITS & MATRIX DOTS ── */}
-        <div className="hidden md:flex items-center absolute left-[50%] ml-[215px] z-10 pointer-events-none">
-          {/* Circuit Trace SVG */}
-          <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
-            {/* Top Branch */}
-            <path d="M 220 50 L 100 50 L 40 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
-            <circle cx="220" cy="50" r="3" fill="#00e5ff" className="animate-pulse" />
-            {/* Middle Direct Branch */}
-            <path d="M 180 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
-            {/* Bottom Branch */}
-            <path d="M 220 230 L 100 230 L 40 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
-            <circle cx="220" cy="230" r="3" fill="#00e5ff" className="animate-pulse" />
-          </svg>
-
-          {/* Digital Dot Matrix */}
-          <div className="grid grid-cols-6 gap-1 opacity-70 pl-8">
-            {rightMatrix.map((row, rIdx) => 
-              row.map((active, cIdx) => (
-                <span 
-                  key={`${rIdx}-${cIdx}`} 
-                  className={`w-1.5 h-1.5 rounded-sm transition-all duration-300 ${
-                    active ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff]' : 'bg-cyan-950/20'
-                  }`}
-                />
-              ))
-            )}
+            {/* Digital Dot Matrix */}
+            <div className="grid grid-cols-6 gap-1 opacity-50 pl-8">
+              {rightMatrix.map((row, rIdx) => 
+                row.map((active, cIdx) => (
+                  <span 
+                    key={`${rIdx}-${cIdx}`} 
+                    className={`w-1.5 h-1.5 rounded-sm transition-all duration-300 ${
+                      active ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff]' : 'bg-cyan-950/20'
+                    }`}
+                  />
+                ))
+              )}
+            </div>
           </div>
+
         </div>
 
-        {/* ── MAIN CENTRAL CYBER LOGIN CARD ── */}
+        {/* ── MAIN CENTRAL CYBER LOGIN CARD (Higher z-index and solid background) ── */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className={`relative w-full max-w-[390px] p-8 bg-[#020d1c] border-2 border-cyan-500 rounded-2xl shadow-[0_0_35px_rgba(0,229,255,0.35)] ${
+          className={`relative w-full max-w-[390px] p-8 border-2 border-cyan-500 rounded-2xl shadow-[0_0_35px_rgba(0,229,255,0.35)] z-20 ${
             shake ? 'animate-shake' : ''
           }`}
           style={{
-            background: 'linear-gradient(135deg, #020d1c 0%, #010815 100%)',
+            background: '#020d1c', // Solid background color overrides any crossing SVG lines
           }}
         >
           {/* Cyber decoration brackets */}
@@ -197,7 +248,7 @@ export default function Home() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-slate-950/95 rounded-2xl z-20 flex flex-col items-center justify-center p-6 text-center"
+                className="absolute inset-0 bg-slate-950/98 rounded-2xl z-30 flex flex-col items-center justify-center p-6 text-center"
               >
                 <div className="relative mb-5">
                   <div className="w-14 h-14 rounded-full border border-cyan-500/35 flex items-center justify-center">
