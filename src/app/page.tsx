@@ -100,7 +100,19 @@ export default function Home() {
 
       {/* ── AMBIENT NEON GLOW CENTER BLURS ── */}
       <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center">
-        <div className="w-[500px] h-[350px] rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-600/10 blur-[130px] opacity-75" />
+        <div className="w-[500px] h-[350px] rounded-full bg-gradient-to-r from-cyan-500/25 to-blue-600/15 blur-[130px] opacity-80" />
+      </div>
+
+      {/* ── ROTATING CYBERNETIC HUD RINGS (Behind the card, z-0) ── */}
+      <div className="absolute pointer-events-none z-0 flex items-center justify-center w-[480px] h-[480px] opacity-25">
+        {/* Outer Ring */}
+        <svg width="480" height="480" viewBox="0 0 480 480" className="absolute animate-spin-slow">
+          <circle cx="240" cy="240" r="220" fill="none" stroke="#00e5ff" strokeWidth="1" strokeDasharray="6 24" />
+        </svg>
+        {/* Inner Ring (Reverse Rotation) */}
+        <svg width="480" height="480" viewBox="0 0 480 480" className="absolute animate-spin-reverse-slow">
+          <circle cx="240" cy="240" r="180" fill="none" stroke="#00e5ff" strokeWidth="1.5" strokeDasharray="40 20" />
+        </svg>
       </div>
 
       {/* ── CENTRALIZED CYBERNETIC LOGIN GATEPORTAL ── */}
@@ -127,13 +139,17 @@ export default function Home() {
 
             {/* Circuit Trace SVG */}
             <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
-              {/* Top Branch */}
-              <path d="M 0 50 L 120 50 L 180 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              {/* Static Background Lines */}
+              <path d="M 0 50 L 120 50 L 180 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.2)" strokeWidth="1.5" />
+              <path d="M 40 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.3)" strokeWidth="1.5" />
+              <path d="M 0 230 L 120 230 L 180 140" fill="none" stroke="rgba(0, 229, 255, 0.2)" strokeWidth="1.5" />
+              
+              {/* Flowing Laser Signal Packets */}
+              <path d="M 0 50 L 120 50 L 180 140 L 220 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" />
+              <path d="M 40 140 L 220 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" style={{ animationDelay: '1.5s' }} />
+              <path d="M 0 230 L 120 230 L 180 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" style={{ animationDelay: '0.8s' }} />
+
               <circle cx="0" cy="50" r="3" fill="#00e5ff" />
-              {/* Middle Direct Branch */}
-              <path d="M 40 140 L 220 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
-              {/* Bottom Branch */}
-              <path d="M 0 230 L 120 230 L 180 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
               <circle cx="0" cy="230" r="3" fill="#00e5ff" />
             </svg>
           </div>
@@ -142,13 +158,17 @@ export default function Home() {
           <div className="hidden md:flex items-center absolute left-[50%] ml-[215px]">
             {/* Circuit Trace SVG */}
             <svg width="220" height="280" viewBox="0 0 220 280" className="overflow-visible">
-              {/* Top Branch */}
-              <path d="M 220 50 L 100 50 L 40 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
+              {/* Static Background Lines */}
+              <path d="M 220 50 L 100 50 L 40 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.2)" strokeWidth="1.5" />
+              <path d="M 180 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.3)" strokeWidth="1.5" />
+              <path d="M 220 230 L 100 230 L 40 140" fill="none" stroke="rgba(0, 229, 255, 0.2)" strokeWidth="1.5" />
+
+              {/* Flowing Laser Signal Packets */}
+              <path d="M 220 50 L 100 50 L 40 140 L 0 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" />
+              <path d="M 180 140 L 0 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" style={{ animationDelay: '1.2s' }} />
+              <path d="M 220 230 L 100 230 L 40 140" fill="none" stroke="#00e5ff" strokeWidth="2" strokeDasharray="15 150" className="flow-line" style={{ animationDelay: '0.5s' }} />
+
               <circle cx="220" cy="50" r="3" fill="#00e5ff" />
-              {/* Middle Direct Branch */}
-              <path d="M 180 140 L 0 140" fill="none" stroke="rgba(0, 229, 255, 0.5)" strokeWidth="1.5" />
-              {/* Bottom Branch */}
-              <path d="M 220 230 L 100 230 L 40 140" fill="none" stroke="rgba(0, 229, 255, 0.4)" strokeWidth="1.5" />
               <circle cx="220" cy="230" r="3" fill="#00e5ff" />
             </svg>
 
@@ -315,6 +335,29 @@ export default function Home() {
         }
         .animate-shake {
           animation: shake 0.2s ease-in-out 2;
+        }
+
+        /* SVG Circuit signal flow animation */
+        @keyframes flow {
+          0% { stroke-dashoffset: 165; }
+          100% { stroke-dashoffset: -165; }
+        }
+        .flow-line {
+          animation: flow 3.5s linear infinite;
+        }
+
+        /* Slowly spinning background HUD rings */
+        @keyframes spin-slow {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse-slow {
+          to { transform: rotate(-360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 24s linear infinite;
+        }
+        .animate-spin-reverse-slow {
+          animation: spin-reverse-slow 28s linear infinite;
         }
       `}</style>
     </div>
