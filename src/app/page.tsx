@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 type AuthState = 'idle' | 'scanning' | 'verifying' | 'success' | 'error';
 
@@ -14,7 +14,6 @@ export default function Home() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
   // Auth Flow States
   const [authState, setAuthState] = useState<AuthState>('idle');
@@ -103,52 +102,6 @@ export default function Home() {
       <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-center">
         <div className="w-[500px] h-[350px] rounded-full bg-gradient-to-r from-cyan-500/20 to-blue-600/10 blur-[130px] opacity-75" />
       </div>
-
-      {/* ── MOVING SMALL DESKTOP WIDGETS IN EMPTY SPACE ── */}
-      {/* Top Left Floating Desktop */}
-      <motion.div
-        animate={{ 
-          y: [0, -18, 0],
-          x: [0, 12, 0],
-          rotate: [0, 2, 0]
-        }}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 7, 
-          ease: "easeInOut" 
-        }}
-        className="absolute top-12 left-16 w-32 h-32 rounded-xl border border-cyan-500/40 bg-slate-950/80 shadow-[0_0_20px_rgba(0,229,255,0.25)] overflow-hidden pointer-events-none z-10 opacity-70 hidden md:block"
-      >
-        <img 
-          src="/mini_cyber_desktop.jpg" 
-          alt="Floating Workspace" 
-          className="w-full h-full object-cover mix-blend-screen"
-        />
-        <div className="absolute bottom-1.5 left-2 text-[8px] font-mono text-cyan-400">WS-NODE-01</div>
-      </motion.div>
-
-      {/* Bottom Right Floating Desktop */}
-      <motion.div
-        animate={{ 
-          y: [0, 15, 0],
-          x: [0, -10, 0],
-          rotate: [0, -2, 0]
-        }}
-        transition={{ 
-          repeat: Infinity, 
-          duration: 8, 
-          ease: "easeInOut",
-          delay: 1
-        }}
-        className="absolute bottom-12 right-16 w-32 h-32 rounded-xl border border-cyan-500/40 bg-slate-950/80 shadow-[0_0_20px_rgba(0,229,255,0.25)] overflow-hidden pointer-events-none z-10 opacity-70 hidden md:block"
-      >
-        <img 
-          src="/mini_cyber_desktop.jpg" 
-          alt="Floating Workspace" 
-          className="w-full h-full object-cover mix-blend-screen"
-        />
-        <div className="absolute bottom-1.5 left-2 text-[8px] font-mono text-cyan-400">WS-NODE-02</div>
-      </motion.div>
 
       {/* ── CENTRALIZED CYBERNETIC LOGIN GATEPORTAL ── */}
       <div className="relative z-10 flex items-center justify-center w-full max-w-5xl px-4 py-8">
@@ -253,7 +206,7 @@ export default function Home() {
                 <div className="relative mb-5">
                   <div className="w-14 h-14 rounded-full border border-cyan-500/35 flex items-center justify-center">
                     {authState === 'success' ? (
-                      <ShieldCheck className="w-7 h-7 text-cyan-400 animate-bounce" />
+                      <ShieldCheck className="w-7 h-7 text-cyan-400" />
                     ) : (
                       <Loader2 className="w-7 h-7 text-cyan-400 animate-spin" />
                     )}
@@ -302,38 +255,32 @@ export default function Home() {
               </motion.div>
             )}
 
-            {/* Email Field */}
+            {/* Email Field (No overlapping icons, clear left padding) */}
             <div className="relative">
-              <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${focusedField === 'email' ? 'text-cyan-400' : 'text-cyan-800'}`} />
               <input
                 type="email"
                 required
                 placeholder="Identity (Email)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setFocusedField('email')}
-                onBlur={() => setFocusedField(null)}
-                className="w-full bg-[#020e1f] hover:bg-[#03152e] border-b-2 border-cyan-800 focus:border-cyan-400 rounded-lg pl-10 pr-4 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-cyan-800/80 font-mono"
+                className="w-full bg-[#020e1f] hover:bg-[#03152e] border-b-2 border-cyan-850 focus:border-cyan-400 rounded-lg px-4 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-cyan-850/80 font-mono"
               />
             </div>
 
-            {/* Password Field */}
+            {/* Password Field (No overlapping icons, clear left padding) */}
             <div className="relative">
-              <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${focusedField === 'password' ? 'text-cyan-400' : 'text-cyan-800'}`} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="Keyphrase (Password)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setFocusedField('password')}
-                onBlur={() => setFocusedField(null)}
-                className="w-full bg-[#020e1f] hover:bg-[#03152e] border-b-2 border-cyan-800 focus:border-cyan-400 rounded-lg pl-10 pr-10 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-cyan-800/80 font-mono"
+                className="w-full bg-[#020e1f] hover:bg-[#03152e] border-b-2 border-cyan-850 focus:border-cyan-400 rounded-lg pl-4 pr-10 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-cyan-850/80 font-mono"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-800 hover:text-cyan-400 transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-850 hover:text-cyan-400 transition"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -341,7 +288,7 @@ export default function Home() {
 
             {/* Credentials hint */}
             <div className="p-3 rounded-lg bg-cyan-950/20 border border-cyan-900/30 text-cyan-500/70 text-[9px] leading-relaxed text-center font-mono">
-              Use any valid email (e.g. <span className="text-cyan-300">admin@intel.ai</span>) and pass &ge; 4 chars.
+              Use any valid email (e.g. <span className="text-cyan-300 font-bold">admin@intel.ai</span>) and pass &ge; 4 chars.
             </div>
 
             {/* Submit */}
