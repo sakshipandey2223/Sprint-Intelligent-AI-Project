@@ -2,111 +2,194 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ShieldCheck,
-  Activity, Sparkles, AlertCircle, Cpu, BarChart3, Clock, CheckCircle
+  Activity, Sparkles, AlertCircle, Cpu, BarChart3, Clock, CheckCircle2,
+  LockKeyhole, Zap, Server, ChevronRight, Layers, Target
 } from 'lucide-react';
 import {
   AreaChart, Area, ResponsiveContainer, BarChart, Bar,
-  RadarChart, PolarGrid, PolarAngleAxis, Radar
+  RadarChart, PolarGrid, PolarAngleAxis, Radar, XAxis, YAxis
 } from 'recharts';
 
 // --- Types ---
 type AuthState = 'idle' | 'scanning' | 'verifying' | 'success' | 'error';
 
-// --- Mock Live Data for Dashboard Preview ---
-const initialSparkData = [
-  { day: 'M', velocity: 45, load: 78 },
-  { day: 'T', velocity: 65, load: 82 },
-  { day: 'W', velocity: 58, load: 64 },
-  { day: 'T', velocity: 89, load: 95 },
-  { day: 'F', velocity: 95, load: 70 },
-  { day: 'S', velocity: 110, load: 60 }
-];
-
 export default function Home() {
   const router = useRouter();
 
-  // --- Input & Visibility State ---
+  // --- Form States ---
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
-  // --- Auth & Interaction State ---
+  // --- Auth Flow States ---
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [progressVal, setProgressVal] = useState(0);
+  const [shake, setShake] = useState(false);
 
-  // --- Interactive Mouse Parallax Effects ---
+  // --- Interactive States & Metrics ---
+  const [activeTab, setActiveTab] = useState<'password' | 'sso'>('password');
+  const [kpiScore, setKpiScore] = useState(0);
+  const [velocityPoints, setVelocityPoints] = useState(0);
+  const [chartData, setChartData] = useState([
+    { name: 'D1', val: 65, load: 78 },
+    { name: 'D2', val: 78, load: 82 },
+    { name: 'D3', val: 72, load: 64 },
+    { name: 'D4', val: 95, load: 95 },
+    { name: 'D5', val: 110, load: 70 },
+    { name: 'D6', val: 125, load: 60 }
+  ]);
+
+  // Refs for 3D card tilt & canvas particles
   const cardRef = useRef<HTMLDivElement>(null);
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rightContainerRef = useRef<HTMLDivElement>(null);
 
-  // Map mouse movement to slight rotation/tilt
-  const rotateX = useTransform(mouseY, [-400, 400], [6, -6]);
-  const rotateY = useTransform(mouseX, [-400, 400], [-6, 6]);
-
-  // --- Live Metrics simulation states ---
-  const [kpi1, setKpi1] = useState(0);
-  const [kpi2, setKpi2] = useState(0);
-  const [pulseActive, setPulseActive] = useState(true);
-  const [graphData, setGraphData] = useState(initialSparkData);
-
+  // --- Canvas Neural Network Particle System ---
   useEffect(() => {
-    // KPI Counters counting up on load
-    const interval = setInterval(() => {
-      setKpi1(prev => (prev < 94 ? prev + 2 : 94));
-      setKpi2(prev => (prev < 142 ? prev + 3 : 142));
-    }, 30);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // Periodically change chart data to make it feel "alive"
-    const liveChartInterval = setInterval(() => {
-      setGraphData(prev =>
-        prev.map(item => ({
-          ...item,
-          velocity: Math.floor(Math.random() * 40) + 70,
-          load: Math.floor(Math.random() * 30) + 60
-        }))
-      );
-      setPulseActive(p => !p);
-    }, 3000);
+    let animationFrameId: number;
+    let particles: Array<{
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      radius: number;
+      color: string;
+    }> = [];
+
+    const resizeCanvas = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      initParticles();
+    };
+
+    const initParticles = () => {
+      particles = [];
+      const numParticles = Math.floor((canvas.width * canvas.height) / 14000);
+      for (let i = 0; i < numParticles; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.4,
+          vy: (Math.random() - 0.5) * 0.4,
+          radius: Math.random() * 2 + 1,
+          color: Math.random() > 0.5 ? 'rgba(34,197,94,0.18)' : 'rgba(99,102,241,0.15)'
+        });
+      }
+    };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw faint connections (lines)
+      for (let i = 0; i < particles.length; i++) {
+        const p1 = particles[i];
+        p1.x += p1.vx;
+        p1.y += p1.vy;
+
+        // Boundaries bounce
+        if (p1.x < 0 || p1.x > canvas.width) p1.vx *= -1;
+        if (p1.y < 0 || p1.y > canvas.height) p1.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p1.color;
+        ctx.fill();
+
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `rgba(99,102,241,${(1 - dist / 120) * 0.08})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    animate();
 
     return () => {
-      clearInterval(interval);
-      clearInterval(liveChartInterval);
+      window.removeEventListener('resize', resizeCanvas);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  // Track cursor position relative to window center
+  // --- Dynamic Analytics Simulators ---
+  useEffect(() => {
+    // Score counts
+    const interval = setInterval(() => {
+      setKpiScore(prev => (prev < 94 ? prev + 2 : 94));
+      setVelocityPoints(prev => (prev < 142 ? prev + 3 : 142));
+    }, 25);
+
+    // Dynamic Chart Shifts
+    const chartInterval = setInterval(() => {
+      setChartData(prev =>
+        prev.map(item => ({
+          ...item,
+          val: Math.floor(Math.random() * 40) + 80,
+          load: Math.floor(Math.random() * 30) + 55
+        }))
+      );
+    }, 4000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(chartInterval);
+    };
+  }, []);
+
+  // --- 3D Parallax Tilt Effect ---
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - (rect.left + rect.width / 2);
-    const y = e.clientY - (rect.top + rect.height / 2);
-    mouseX.set(x);
-    mouseY.set(y);
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+
+    // Soft rotation angles
+    const tiltX = (y / (rect.height / 2)) * -6;
+    const tiltY = (x / (rect.width / 2)) * 6;
+
+    card.style.transform = `rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-2px)`;
   };
 
   const handleMouseLeave = () => {
-    mouseX.set(0);
-    mouseY.set(0);
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transform = 'rotateX(0deg) rotateY(0deg) translateY(0px)';
   };
 
-  // --- Handle Login Submission ---
-  const handleSubmit = (e: React.FormEvent) => {
+  // --- Form Submission Flow ---
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.includes('@')) {
       setAuthState('error');
-      setErrorMessage('Please enter a valid email address');
+      setErrorMessage('A valid workspace ID (email) is required.');
       triggerShake();
       return;
     }
     if (password.length < 4) {
       setAuthState('error');
-      setErrorMessage('Password must be at least 4 characters');
+      setErrorMessage('Keyphrase must be at least 4 characters.');
       triggerShake();
       return;
     }
@@ -115,437 +198,461 @@ export default function Home() {
     setErrorMessage('');
     setProgressVal(0);
 
-    // Progress bar tick simulator
-    let currentProgress = 0;
-    const progressInterval = setInterval(() => {
-      currentProgress += 10;
-      setProgressVal(currentProgress);
-      if (currentProgress === 50) {
+    let progress = 0;
+    const timer = setInterval(() => {
+      progress += 10;
+      setProgressVal(progress);
+      if (progress === 40) {
         setAuthState('verifying');
       }
-      if (currentProgress >= 100) {
-        clearInterval(progressInterval);
+      if (progress >= 100) {
+        clearInterval(timer);
         setAuthState('success');
         setTimeout(() => {
           router.push('/dashboard');
-        }, 1200);
+        }, 1100);
       }
-    }, 200);
+    }, 180);
   };
 
-  // Shake animation trigger logic
-  const [shake, setShake] = useState(false);
   const triggerShake = () => {
     setShake(true);
     setTimeout(() => setShake(false), 500);
   };
 
   return (
-    <div
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-[#020617] px-6 py-12"
-      style={{
-        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)',
-        backgroundSize: '48px 48px'
-      }}
-    >
-      {/* ── BACKGROUND GLOWS ── */}
+    <div className="relative min-h-screen w-screen bg-[#020617] text-[#F8FAFC] flex overflow-hidden font-sans">
+      
+      {/* ── BACKGROUND CANVAS (Neural Network Particles) ── */}
+      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0 opacity-70" />
+
+      {/* ── GLOWING AURORA SPHERES ── */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {/* Animated gradient mesh */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[130px] animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] rounded-full bg-emerald-500/5 blur-[120px] animate-pulse" style={{ animationDuration: '12s' }} />
-        <div className="absolute top-[35%] right-[20%] w-[45%] h-[45%] rounded-full bg-violet-600/5 blur-[140px] animate-pulse" style={{ animationDuration: '10s' }} />
+        <div className="absolute top-[-10%] right-[-10%] w-[55%] h-[55%] rounded-full bg-gradient-to-br from-emerald-500/10 to-indigo-500/0 blur-[130px] animate-pulse" style={{ animationDuration: '9s' }} />
+        <div className="absolute bottom-[-15%] left-[-5%] w-[45%] h-[45%] rounded-full bg-gradient-to-tr from-indigo-600/8 to-emerald-500/0 blur-[120px] animate-pulse" style={{ animationDuration: '14s' }} />
       </div>
 
-      {/* ── MASTER CONTAINER ── */}
-      <div className="relative z-10 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      {/* ── FULL VIEWPORT CONTENT CONTAINER ── */}
+      <div className="relative z-10 w-full flex flex-col lg:flex-row">
 
-        {/* ── LEFT PANEL: FLOATING LOGIN CARD (5 Cols) ── */}
-        <div className="lg:col-span-5 flex flex-col justify-center">
+        {/* ── LEFT PANEL: LOGO & AUTH PORTAL (Full height container) ── */}
+        <div className="w-full lg:w-[460px] shrink-0 border-r border-[#334155]/60 bg-gradient-to-b from-[#020617]/90 to-[#0F172A]/90 backdrop-blur-2xl flex flex-col justify-between p-8 z-10 h-screen overflow-y-auto">
+          
+          {/* Top: Brand Header */}
           <motion.div
-            ref={cardRef}
-            style={{
-              rotateX: rotateX,
-              rotateY: rotateY,
-              transformStyle: 'preserve-3d',
-              perspective: 1000
-            }}
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className={`bento p-8 ${shake ? 'animate-shake' : ''} border border-slate-800/80 shadow-2xl relative`}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="flex items-center gap-3"
           >
-            {/* Ambient indicator lights on card */}
-            <div className="absolute top-0 left-12 right-12 h-[1px] bg-gradient-to-r from-transparent via-[#22C55E]/40 to-transparent" />
-            <div className="absolute bottom-0 left-24 right-24 h-[1px] bg-gradient-to-r from-transparent via-[#6366f1]/40 to-transparent" />
-
-            {/* Header / Logo */}
-            <div className="flex flex-col items-center text-center mb-8">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 mb-4">
-                <Cpu className="w-6 h-6 text-white animate-pulse" />
-              </div>
-              <h2 className="text-xl font-extrabold text-slate-100 tracking-tight flex items-center gap-2">
-                Sprint Intelligence
-              </h2>
-              <p className="font-mono text-[10px] text-[#22C55E] tracking-widest uppercase mt-1">
-                AG-UC-0010 · Enterprise SaaS
-              </p>
-              <p className="text-xs text-slate-400 mt-2 max-w-xs leading-relaxed">
-                AI-powered sprint analytics, predictive insights, and engineering excellence indicators.
-              </p>
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#22C55E] to-indigo-600 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+              <Activity className="w-4 h-4 text-white" />
             </div>
-
-            {/* Scanning / Loading Screen Overlay */}
-            <AnimatePresence>
-              {(authState === 'scanning' || authState === 'verifying' || authState === 'success') && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-[20px] z-20 flex flex-col items-center justify-center p-6 text-center"
-                >
-                  {/* Cyber shield scan animation */}
-                  <div className="relative mb-6">
-                    <div className="w-16 h-16 rounded-full border border-[#22C55E]/30 flex items-center justify-center">
-                      {authState === 'success' ? (
-                        <CheckCircle className="w-8 h-8 text-[#22C55E] animate-bounce" />
-                      ) : (
-                        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                      )}
-                    </div>
-                    {authState !== 'success' && (
-                      <div className="absolute inset-0 border border-indigo-500/35 rounded-full scale-125 animate-ping" />
-                    )}
-                  </div>
-
-                  <h3 className="font-mono text-sm font-semibold tracking-wider text-[#F8FAFC]">
-                    {authState === 'scanning' && 'SCANNING CREDENTIALS...'}
-                    {authState === 'verifying' && 'DECRYPTING CLIENT KEY...'}
-                    {authState === 'success' && 'ACCESS GRANTED'}
-                  </h3>
-
-                  {/* Progress Line */}
-                  <div className="w-48 h-1 bg-slate-800 rounded-full mt-4 overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500"
-                      initial={{ width: '0%' }}
-                      animate={{ width: `${progressVal}%` }}
-                      transition={{ ease: 'easeInOut' }}
-                    />
-                  </div>
-
-                  <p className="font-mono text-[10px] text-slate-500 mt-2">
-                    {authState === 'scanning' && `Analyzing integrity: ${progressVal}%`}
-                    {authState === 'verifying' && 'Handshake established with AG-UC-0010 server'}
-                    {authState === 'success' && 'Routing to analytical viewport...'}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Standard Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Error Callout */}
-              {authState === 'error' && (
-                <motion.div
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-red-950/20 border border-red-500/30 text-red-300 text-xs"
-                >
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                  <span>{errorMessage}</span>
-                </motion.div>
-              )}
-
-              {/* Email Address */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                  Identity (Email)
-                </label>
-                <div className="relative">
-                  <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${focusedField === 'email' ? 'text-[#22C55E]' : 'text-slate-500'}`} />
-                  <input
-                    type="email"
-                    required
-                    placeholder="manager@sprintintel.ai"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedField('email')}
-                    onBlur={() => setFocusedField(null)}
-                    className="w-full bg-[#1e293b]/30 hover:bg-[#1e293b]/50 focus:bg-[#0f172a] border border-slate-800 focus:border-[#22C55E]/40 rounded-xl pl-11 pr-4 py-3 text-sm text-[#F8FAFC] outline-none transition-all placeholder:text-slate-600"
-                  />
-                </div>
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                    Keyphrase (Password)
-                  </label>
-                  <button type="button" className="text-[10px] text-indigo-400 hover:text-indigo-300 transition font-mono">
-                    Reset phrase
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${focusedField === 'password' ? 'text-[#22C55E]' : 'text-slate-500'}`} />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    className="w-full bg-[#1e293b]/30 hover:bg-[#1e293b]/50 focus:bg-[#0f172a] border border-slate-800 focus:border-[#22C55E]/40 rounded-xl pl-11 pr-11 py-3 text-sm text-[#F8FAFC] outline-none transition-all placeholder:text-slate-600"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remeber me checkbox */}
-              <div className="flex items-center justify-between text-xs py-1">
-                <label className="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-200 select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="rounded border-slate-800 bg-[#0F172A] text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                  />
-                  <span>Keep Session Open</span>
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <motion.button
-                type="submit"
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full relative flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-indigo-600 text-white font-bold text-sm shadow-lg shadow-emerald-500/10 cursor-pointer overflow-hidden group"
-              >
-                {/* Shine Sweep animation effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shine" />
-                <span>Initialize Dashboard</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </motion.button>
-            </form>
-
-            {/* Divider */}
-            <div className="relative my-6 text-center">
-              <span className="absolute inset-x-0 top-1/2 h-[1px] bg-slate-800" />
-              <span className="relative bg-[#0b0f19] px-3 font-mono text-[9px] text-slate-500 uppercase tracking-widest">
-                Trusted Enterprise Federations
-              </span>
-            </div>
-
-            {/* SSO / Identity Providers Grid */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { name: 'Google Workspace', icon: 'G' },
-                { name: 'Azure Active Dir', icon: 'A' },
-                { name: 'GitHub Enterprise', icon: 'H' },
-                { name: 'Okta SSO Single', icon: 'O' }
-              ].map((sso) => (
-                <button
-                  key={sso.name}
-                  type="button"
-                  className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-slate-800/80 bg-slate-900/40 hover:bg-[#1e293b]/40 text-[11px] text-slate-400 hover:text-slate-200 transition font-medium cursor-pointer"
-                >
-                  <span className="font-mono text-indigo-400 font-extrabold">{sso.icon}</span>
-                  <span className="truncate">{sso.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Footnote */}
-            <div className="text-center mt-6 text-[10px] text-slate-500 font-mono">
-              Secure endpoint backed by TLS 1.3 & AES-256
+            <div>
+              <span className="font-mono text-xs font-extrabold tracking-widest text-[#22C55E] uppercase block leading-none">Sprint Intel</span>
+              <span className="text-[10px] text-slate-500 font-mono tracking-widest">AG-UC-0010</span>
             </div>
           </motion.div>
+
+          {/* Middle: Interactive Login Bento Card */}
+          <div className="my-auto py-8">
+            <motion.div
+              ref={cardRef}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              style={{ transformStyle: 'preserve-3d', perspective: 1000 }}
+              initial={{ opacity: 0, scale: 0.96, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className={`bento p-7 border border-[#334155]/70 shadow-2xl relative transition-all duration-300 ${shake ? 'animate-shake' : ''}`}
+            >
+              {/* Internal Accent Glow Top Line */}
+              <div className="absolute top-0 inset-x-0 h-[1px] bg-gradient-to-r from-transparent via-[#22C55E]/40 to-transparent" />
+
+              {/* Login Title */}
+              <div className="mb-6">
+                <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                  <LockKeyhole className="w-4.5 h-4.5 text-[#22C55E]" />
+                  Authenticate
+                </h2>
+                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                  Enter authorization keys to sync live sprint metrics.
+                </p>
+              </div>
+
+              {/* Loader Overlay (Auth Flow) */}
+              <AnimatePresence>
+                {(authState === 'scanning' || authState === 'verifying' || authState === 'success') && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-slate-950/95 backdrop-blur-md rounded-[20px] z-30 flex flex-col items-center justify-center p-6 text-center"
+                  >
+                    <div className="relative mb-5">
+                      <div className="w-14 h-14 rounded-full border border-[#22C55E]/30 flex items-center justify-center">
+                        {authState === 'success' ? (
+                          <CheckCircle2 className="w-7 h-7 text-[#22C55E] animate-bounce" />
+                        ) : (
+                          <Loader2 className="w-7 h-7 text-indigo-400 animate-spin" />
+                        )}
+                      </div>
+                      {authState !== 'success' && (
+                        <div className="absolute inset-0 border border-indigo-500/20 rounded-full scale-125 animate-ping" />
+                      )}
+                    </div>
+
+                    <span className="font-mono text-xs font-bold tracking-widest text-[#F8FAFC] block">
+                      {authState === 'scanning' && 'SCANNING VERIFICATION INDEX...'}
+                      {authState === 'verifying' && 'DECRYPTING RSA HANDSHAKE...'}
+                      {authState === 'success' && 'TELEMETRY CONNECTION ESTABLISHED'}
+                    </span>
+
+                    {/* Progress Slider */}
+                    <div className="w-40 h-1 bg-slate-800 rounded-full mt-4 overflow-hidden relative">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-indigo-500"
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${progressVal}%` }}
+                        transition={{ ease: 'easeInOut' }}
+                      />
+                    </div>
+
+                    <span className="font-mono text-[9px] text-slate-500 mt-2 block">
+                      {authState === 'scanning' && `Reading identity node: ${progressVal}%`}
+                      {authState === 'verifying' && 'Syncing database payload schemas...'}
+                      {authState === 'success' && 'Redirecting to executive workspace...'}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Form Input fields */}
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                {authState === 'error' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-2.5 p-3 rounded-lg bg-red-950/20 border border-red-500/35 text-red-300 text-xs"
+                  >
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <span>{errorMessage}</span>
+                  </motion.div>
+                )}
+
+                {/* Email (Workspace ID) */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block font-mono">
+                    Workspace ID
+                  </label>
+                  <div className="relative">
+                    <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${focusedField === 'email' ? 'text-[#22C55E]' : 'text-slate-500'}`} />
+                    <input
+                      type="email"
+                      required
+                      placeholder="manager@sprintintel.ai"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                      className="w-full bg-[#1e293b]/25 hover:bg-[#1e293b]/45 focus:bg-[#020617] border border-[#334155]/60 focus:border-[#22C55E]/40 rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-slate-600 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* Password (Phrase) */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block font-mono">
+                      Passphrase
+                    </label>
+                    <button type="button" className="text-[9px] text-indigo-400 hover:text-indigo-300 font-mono">
+                      Forgot?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${focusedField === 'password' ? 'text-[#22C55E]' : 'text-slate-500'}`} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                      className="w-full bg-[#1e293b]/25 hover:bg-[#1e293b]/45 focus:bg-[#020617] border border-[#334155]/60 focus:border-[#22C55E]/40 rounded-xl pl-10 pr-10 py-2.5 text-xs text-[#F8FAFC] outline-none transition-all placeholder:text-slate-600 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                    >
+                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  className="w-full relative flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-[#22C55E] to-indigo-600 text-white font-bold text-xs shadow-lg shadow-emerald-500/10 cursor-pointer overflow-hidden group mt-3"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-x-full group-hover:animate-shine" />
+                  <span>Access Workspace</span>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </motion.button>
+              </form>
+
+              {/* SSO Divider */}
+              <div className="relative my-5 text-center">
+                <span className="absolute inset-x-0 top-1/2 h-[1px] bg-slate-800" />
+                <span className="relative bg-[#0d1220] px-3 font-mono text-[8px] text-slate-500 uppercase tracking-widest font-bold">
+                  Corporate SAML SSO
+                </span>
+              </div>
+
+              {/* SSO Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { name: 'Azure Active', key: 'A' },
+                  { name: 'GitHub Enterprise', key: 'G' }
+                ].map((sso) => (
+                  <button
+                    key={sso.name}
+                    type="button"
+                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg border border-[#334155]/60 bg-slate-900/40 hover:bg-[#1e293b]/40 text-[10px] text-slate-400 hover:text-slate-200 transition font-mono cursor-pointer"
+                  >
+                    <span className="font-bold text-indigo-400">{sso.key}</span>
+                    <span className="truncate">{sso.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bottom: Footer Info */}
+          <div className="flex items-center justify-between text-[9px] text-slate-600 font-mono border-t border-slate-900 pt-4">
+            <span>DB ENGINE: ACTIVE</span>
+            <span>SECURE SHELL v1.3</span>
+          </div>
         </div>
 
-        {/* ── RIGHT PANEL: LIVE TELEMETRY PREVIEW (7 Cols) ── */}
-        <div className="lg:col-span-7 flex flex-col justify-center">
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1.0, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-6"
-          >
-            {/* Header info */}
-            <div className="hidden lg:block">
-              <span className="pill pill-green mb-3">SYSTEM TELEMETRY PREVIEW</span>
-              <h3 className="text-2xl font-bold tracking-tight text-white">
-                Observe Velocity & Predictive Health
-              </h3>
-              <p className="text-sm text-slate-400 max-w-lg mt-2">
-                Real-time connection monitoring tracks daily task velocity, epic split values, and individual developer load levels.
+        {/* ── RIGHT PANEL: FULL VIEWPORT ENTERPRISE PREVIEW (Hero visualization) ── */}
+        <div
+          ref={rightContainerRef}
+          className="flex-1 h-screen overflow-y-auto hidden lg:flex flex-col justify-between p-12 bg-gradient-to-br from-[#020617]/40 to-[#0F172A]/10 relative z-10"
+        >
+          {/* Top: Section Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="section-eyebrow">Real-Time Operational Telemetry</div>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-none mt-1.5">
+                Optimize Sprint Health with Live Metrics
+              </h2>
+              <p className="text-xs text-slate-400 max-w-xl mt-3 leading-relaxed">
+                Connect metrics directly to your planning cycle. Observe velocity trends, evaluate developer workload balance, and preempt blockers before they delay commitments.
               </p>
             </div>
 
-            {/* Bento Grid Preview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              {/* Card 1: Active Velocity Line chart */}
-              <div className="bento p-5 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="icon-box icon-indigo" style={{ width: '26px', height: '26px', borderRadius: '6px' }}>
-                      <Activity style={{ width: '13px', height: '13px' }} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-300">Live Team Velocity</h4>
-                      <span className="text-[9px] font-mono text-slate-500">Updates every 3s</span>
-                    </div>
-                  </div>
-                  <span className="pill pill-indigo">89 SP avg</span>
-                </div>
-
-                <div className="chart-wrap" style={{ height: '110px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={graphData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.20} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0.01} />
-                        </linearGradient>
-                      </defs>
-                      <Area type="monotone" dataKey="velocity" stroke="#6366f1" strokeWidth={2} fill="url(#lineGrad)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Card 2: Sprint health dial */}
-              <div className="bento p-5 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="icon-box icon-green" style={{ width: '26px', height: '26px', borderRadius: '6px' }}>
-                      <Cpu style={{ width: '13px', height: '13px' }} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-300">Predictive Sprint Health</h4>
-                      <span className="text-[9px] font-mono text-slate-500">AI Risk Rating</span>
-                    </div>
-                  </div>
-                  <span className="pill pill-green">Optimal</span>
-                </div>
-
-                {/* Donut progress visual */}
-                <div className="flex items-center gap-5 my-1">
-                  <svg width="60" height="60" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)' }}>
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(51,65,85,0.4)" strokeWidth="3.5" />
-                    <motion.circle
-                      cx="18" cy="18" r="15" fill="none" stroke="#22C55E" strokeWidth="4" strokeLinecap="round"
-                      strokeDasharray="94.25"
-                      initial={{ strokeDashoffset: 94.25 }}
-                      animate={{ strokeDashoffset: 94.25 - (94.25 * kpi1 / 100) }}
-                      transition={{ duration: 1.5 }}
-                    />
-                  </svg>
-                  <div>
-                    <div className="text-2xl font-bold font-mono text-[#22C55E]">
-                      {kpi1}%
-                    </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
-                      No blockers registered
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Capacity Radar preview */}
-              <div className="bento p-5 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="icon-box icon-sky" style={{ width: '26px', height: '26px', borderRadius: '6px' }}>
-                      <BarChart3 style={{ width: '13px', height: '13px' }} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-300">Resource Load Radar</h4>
-                      <span className="text-[9px] font-mono text-slate-500">Roles split mapping</span>
-                    </div>
-                  </div>
-                  <span className="pill pill-sky">Stable</span>
-                </div>
-
-                <div style={{ height: '110px', marginTop: '-6px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="75%" data={[
-                      { subject: 'Dev', A: 120 },
-                      { subject: 'QA', A: 98 },
-                      { subject: 'Design', A: 86 },
-                      { subject: 'PM', A: 99 },
-                      { subject: 'Ops', A: 85 }
-                    ]}>
-                      <PolarGrid stroke="rgba(51,65,85,0.30)" />
-                      <PolarAngleAxis dataKey="subject" stroke="rgba(71,85,105,0.60)" fontSize={8} fontFamily="var(--font-data)" />
-                      <Radar name="Staff" dataKey="A" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.12} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* Card 4: Load metric & capacity indicator */}
-              <div className="bento p-5 flex flex-col gap-4">
-                <div className="flex justify-between items-center">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div className="icon-box icon-amber" style={{ width: '26px', height: '26px', borderRadius: '6px' }}>
-                      <Clock style={{ width: '13px', height: '13px' }} />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-300">Sprint Timeline Flow</h4>
-                      <span className="text-[9px] font-mono text-slate-500">Days remaining</span>
-                    </div>
-                  </div>
-                  <span className="pill pill-amber">Day 11</span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Total Progress:</span>
-                    <span className="font-mono text-amber-400 font-bold">{kpi2} SP Done</span>
-                  </div>
-                  <div className="bullet-track">
-                    <motion.div
-                      className="bullet-fill bg-gradient-to-r from-amber-500 to-indigo-500"
-                      style={{ width: '74%' }}
-                      initial={{ width: '0%' }}
-                      animate={{ width: '74%' }}
-                      transition={{ duration: 1.4 }}
-                    />
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono">
-                    Estimated delivery time remaining: 3 days
-                  </div>
-                </div>
+            {/* Simulated server metrics */}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '6px 12px', borderRadius: '8px',
+                background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)',
+              }}>
+                <Server className="w-3.5 h-3.5 text-[#22C55E]" />
+                <span className="text-[10px] font-bold font-mono text-[#22C55E]">SERVER CORE: LIVE</span>
               </div>
             </div>
+          </div>
 
-            {/* AI Assistant Dialogue Box */}
+          {/* Middle: Premium Bento Grid Metrics Panels */}
+          <div className="grid grid-cols-12 gap-5 my-8 items-stretch">
+            
+            {/* 1. Live velocity Sparkline Area Chart (6 Cols) */}
             <motion.div
-              initial={{ scale: 0.98, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="bento p-5 flex items-start gap-4 border-l-2 border-emerald-500"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.6 }}
+              className="bento p-6 col-span-6 flex flex-col justify-between min-h-[190px]"
             >
-              <div className="icon-box icon-green shrink-0">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
+              <div className="flex justify-between items-start">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="icon-box icon-indigo" style={{ width: '28px', height: '28px', borderRadius: '7px' }}>
+                    <Activity style={{ width: '13px', height: '13px' }} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300">Workspace Task Velocity</h4>
+                    <span className="text-[9px] font-mono text-slate-500">Live delta changes</span>
+                  </div>
+                </div>
+                <span className="pill pill-indigo">Avg 94 SP</span>
               </div>
-              <div>
-                <h5 className="text-xs font-bold text-slate-200">AI Assistant Prediction</h5>
-                <p className="text-xs text-slate-400 leading-relaxed mt-1">
-                  "Sprint 10 velocity is currently pacing 8% higher than average. No active code blockers detected. The likelihood of complete ticket delivery is rated at 94%."
+
+              <div className="chart-wrap" style={{ height: '90px', marginTop: '10px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.24} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Area type="monotone" dataKey="val" stroke="#6366f1" strokeWidth={2} fill="url(#areaGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* 2. Health Score Circle Gauge (6 Cols) */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="bento p-6 col-span-6 flex flex-col justify-between min-h-[190px]"
+            >
+              <div className="flex justify-between items-start">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="icon-box icon-green" style={{ width: '28px', height: '28px', borderRadius: '7px' }}>
+                    <Cpu style={{ width: '13px', height: '13px' }} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300">Composite Sprint Health</h4>
+                    <span className="text-[9px] font-mono text-slate-500">Predicted rate</span>
+                  </div>
+                </div>
+                <span className="pill pill-green">Optimal</span>
+              </div>
+
+              <div className="flex items-center gap-6 my-auto pt-2">
+                <svg width="68" height="68" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(51,65,85,0.30)" strokeWidth="3" />
+                  <motion.circle
+                    cx="18" cy="18" r="15" fill="none" stroke="#22C55E" strokeWidth="3.5" strokeLinecap="round"
+                    strokeDasharray="94.25"
+                    initial={{ strokeDashoffset: 94.25 }}
+                    animate={{ strokeDashoffset: 94.25 - (94.25 * kpiScore / 100) }}
+                    transition={{ duration: 1.6 }}
+                  />
+                </svg>
+                <div>
+                  <div className="text-2xl font-bold font-mono text-[#22C55E]" style={{ letterSpacing: '-0.03em', lineHeight: 1 }}>
+                    {kpiScore}%
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Zero blocker risks flagged within local epic timelines.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* 3. Resource load mapping radar (6 Cols) */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="bento p-6 col-span-6 flex flex-col justify-between min-h-[190px]"
+            >
+              <div className="flex justify-between items-start">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="icon-box icon-sky" style={{ width: '28px', height: '28px', borderRadius: '7px' }}>
+                    <BarChart3 style={{ width: '13px', height: '13px' }} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300">Staff Allocation Chart</h4>
+                    <span className="text-[9px] font-mono text-slate-500">Relative role load</span>
+                  </div>
+                </div>
+                <span className="pill pill-sky">Stable</span>
+              </div>
+
+              <div style={{ height: '90px', marginTop: '10px' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%" data={[
+                    { subject: 'Dev', A: 120 },
+                    { subject: 'QA', A: 92 },
+                    { subject: 'Design', A: 78 },
+                    { subject: 'PM', A: 104 },
+                    { subject: 'Ops', A: 85 }
+                  ]}>
+                    <PolarGrid stroke="rgba(51,65,85,0.30)" />
+                    <PolarAngleAxis dataKey="subject" stroke="rgba(71,85,105,0.60)" fontSize={8} fontFamily="var(--font-data)" />
+                    <Radar name="Staff" dataKey="A" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.12} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* 4. Sprint progress timeline metric (6 Cols) */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="bento p-6 col-span-6 flex flex-col justify-between min-h-[190px]"
+            >
+              <div className="flex justify-between items-start">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="icon-box icon-amber" style={{ width: '28px', height: '28px', borderRadius: '7px' }}>
+                    <Clock style={{ width: '13px', height: '13px' }} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-300">Scope Timeline Burn</h4>
+                    <span className="text-[9px] font-mono text-slate-500">Days tracking</span>
+                  </div>
+                </div>
+                <span className="pill pill-amber">Day 11/14</span>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-400">Total Completion:</span>
+                  <span className="font-mono text-amber-400">{velocityPoints} SP</span>
+                </div>
+                {/* Custom Bullet progress track */}
+                <div className="bullet-track" style={{ height: '7px' }}>
+                  <motion.div
+                    className="bullet-fill bg-gradient-to-r from-amber-500 to-indigo-500"
+                    style={{ width: '74%' }}
+                    initial={{ width: '0%' }}
+                    animate={{ width: '74%' }}
+                    transition={{ duration: 1.4 }}
+                  />
+                  <div className="bullet-target-marker" style={{ left: '80%' }} />
+                </div>
+                <p className="text-[9px] text-slate-500 font-mono">
+                  Calculated projection values estimate complete scope fulfillment.
                 </p>
               </div>
             </motion.div>
+          </div>
+
+          {/* Bottom: Interactive AI Copilot Prediction Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, duration: 0.6 }}
+            className="bento p-5 flex items-start gap-4 border-l-2 border-[#22C55E] bg-[#0F172A]/75 relative overflow-hidden"
+          >
+            {/* Shimmer sweep */}
+            <div className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-[#22C55E]/5 to-transparent skew-x-12 -translate-x-full animate-[shimmer_3.5s_infinite]" />
+            
+            <div className="icon-box icon-green shrink-0" style={{ width: '32px', height: '32px', borderRadius: '8px' }}>
+              <Sparkles className="w-4 h-4 text-[#22C55E]" />
+            </div>
+            <div>
+              <h5 className="text-xs font-bold text-slate-200 flex items-center gap-1.5 font-mono">
+                AI PREDICTIVE ASSISTANT
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+              </h5>
+              <p className="text-xs text-slate-400 leading-relaxed mt-1.5 font-sans">
+                "Sprint 10 velocity trends are tracking 8% above baseline metrics. General risk modeling shows optimal parameters, indicating a 94% probability of achieving committed story points."
+              </p>
+            </div>
           </motion.div>
         </div>
 
@@ -553,9 +660,9 @@ export default function Home() {
 
       <style>{`
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-6px); }
-          75% { transform: translateX(6px); }
+          0%, 100% { transform: rotateX(0deg) rotateY(0deg) translateX(0); }
+          25% { transform: rotateX(-2deg) rotateY(-2deg) translateX(-6px); }
+          75% { transform: rotateX(2deg) rotateY(2deg) translateX(6px); }
         }
         .animate-shake {
           animation: shake 0.2s ease-in-out 2;
