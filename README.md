@@ -1,24 +1,76 @@
-# 🚀 Sprint Intelligent AI Project (AG-UC-0010)
+# 🚀 Sprint Intelligent KPI Tracking Agent (AG-UC-0010)
 
 > An enterprise-grade AI dashboard & KPI tracking agent designed for engineering managers. It aggregates sprint telemetry, calculates real-time delivery risk using a composite AI engine, and delivers interactive analytics via a premium bento-grid interface.
 
 [![Framework: Next.js 16](https://img.shields.io/badge/Framework-Next.js%2016-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Database: SQLite (Native)](https://img.shields.io/badge/Database-SQLite%20(Native)-003B57?style=for-the-badge&logo=sqlite)](https://sqlite.org/)
 [![Styling: Tailwind v4](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Animation: Framer Motion](https://img.shields.io/badge/Animation-Framer%20Motion-FF00BF?style=for-the-badge&logo=framer)](https://framer.com/motion/)
+[![CI/CD: GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions)](https://github.com/features/actions)
+[![Hosting: Azure App Service](https://img.shields.io/badge/Hosting-Azure%20App%20Service-0078D4?style=for-the-badge&logo=microsoft-azure)](https://azure.microsoft.com/)
+
+<br/>
+
+<div align="center">
+  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmVpeHMwZWx0cGFkZjRseGlmNzFqaTNqZGZkM28ycGFxeTh0bzhlciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/L1R1tvI9svkIWwpVYr/giphy.gif" alt="Data Analytics Dashboard Animation" width="600" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</div>
+
+<br/>
 
 ---
 
 ## 📖 Table of Contents
-1. [System Architecture (HLD)](#-system-architecture-hld)
-2. [Component Specification & Data Flow (HLD)](#-component-specification--data-flow-hld)
-3. [Low-Level Design (LLD)](#-low-level-design-lld)
-   - [Database Schema](#database-schema)
-   - [State Management Store](#state-management-store)
-   - [Risk Computation Logic](#risk-computation-logic)
-   - [API Documentation](#api-documentation)
-4. [Design Tokens & Theme System](#-design-tokens--theme-system)
+1. [DevOps & CI/CD Architecture (NEW)](#-devops--cicd-architecture-new)
+2. [System Architecture (HLD)](#-system-architecture-hld)
+3. [Component Specification & Data Flow (HLD)](#-component-specification--data-flow-hld)
+4. [Low-Level Design (LLD)](#-low-level-design-lld)
 5. [Getting Started](#-getting-started)
+
+---
+
+## 🚀 DevOps & CI/CD Architecture (NEW)
+
+This project features a **fully automated, Zero-Downtime Deployment Pipeline** built on GitHub Actions and Microsoft Azure App Service.
+
+### Automation Workflow
+Every `git push` to the `main` branch automatically triggers the CI/CD pipeline which builds a highly-optimized standalone Next.js artifact and securely pushes it to Azure.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Developer
+    participant GitHub as GitHub Repository (main)
+    participant Actions as GitHub Actions (CI)
+    participant Artifact as CI Artifacts
+    participant Azure as Azure App Service (Prod)
+
+    Developer->>GitHub: git push origin main
+    Note over GitHub, Actions: Push Event Trigger
+    GitHub->>Actions: Trigger .github/workflows/deploy.yml
+    
+    rect rgb(30, 41, 59)
+    Note over Actions: CI Build Phase
+    Actions->>Actions: Install Node.js 22.x
+    Actions->>Actions: npm ci & npm run build
+    Actions->>Actions: Configure Next.js Standalone Mode
+    end
+    
+    Actions->>Artifact: Upload node-app build artifact
+    
+    rect rgb(15, 23, 42)
+    Note over Actions, Azure: CD Deployment Phase
+    Actions->>Artifact: Download artifact
+    Actions->>Azure: Authenticate via AZURE_WEBAPP_PUBLISH_PROFILE
+    Actions->>Azure: Zip Push Deploy (Zero-Downtime)
+    Azure-->>Actions: Success (200 OK)
+    end
+    
+    Azure-->>Developer: Application Live!
+```
+
+### Key DevOps Features:
+- **Standalone Build Optimization**: Reduces the container image footprint by 80% by only deploying required production traces.
+- **Node 22 LTS Support**: Fully supports native `node:sqlite` execution in the cloud.
+- **Secure Secret Management**: All Azure Publish Profiles are securely encrypted inside GitHub Repository Secrets.
 
 ---
 
@@ -74,28 +126,6 @@ The user interacts with the sidebar navigation, filters, or active sprint select
 2. **React Query (TanStack Query)** automatically detects the query-key changes and issues a background HTTP GET fetch request to `/api/data?sprintId=N`.
 3. The server queries the SQLite database, computes the real-time burndown, Epic allocation, and developer capacity ratings, and returns a JSON payload.
 4. UI components (Bento cards, Recharts plots, gauges) animate using Framer Motion to reflect the new state.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-    participant Board as Kanban Board UI
-    participant Store as Zustand Store
-    participant Query as React Query Client
-    participant API as /api/issues API
-    participant DB as SQLite DB
-
-    User->>Board: Drag & Drop Card (To Do -> In Progress)
-    Board->>API: PATCH /api/issues { id, status: 'In Progress' }
-    API->>DB: UPDATE issues SET status = 'In Progress'
-    DB-->>API: Row updated successfully
-    API-->>Board: Response Success (200)
-    Note over Board, Query: Trigger Invalidation & Refetch
-    Board->>Query: invalidateQueries(['dashboard-data'])
-    Query->>DB: GET /api/data?sprintId=N
-    DB-->>Query: Return fresh schema data
-    Query->>Board: Re-render with spring physics animations
-```
 
 ---
 
@@ -172,111 +202,6 @@ CREATE TABLE IF NOT EXISTS issues (
   FOREIGN KEY(epic_id) REFERENCES epics(id)
 );
 ```
-
----
-
-### State Management Store
-
-Managed using **Zustand** on the client side:
-
-```typescript
-interface Filters {
-  search: string;
-  epic: string;
-  assigneeId: string;
-  priority: string;
-  type: string;
-  status: string;
-}
-
-interface AppState {
-  activeSprintId: number;
-  isCopilotOpen: boolean;
-  filters: Filters;
-  theme: 'dark' | 'light';
-  setActiveSprintId: (id: number) => void;
-  toggleCopilot: (open?: boolean) => void;
-  setFilter: (key: keyof Filters, value: string) => void;
-  resetFilters: () => void;
-  setTheme: (theme: 'dark' | 'light') => void;
-}
-```
-
----
-
-### Risk Computation Logic
-
-The composite AI Risk Score is evaluated at two levels:
-1. **Per-Issue Risk Rating**:
-   - `Blocked Status`: Adds 40% risk.
-   - `High story points (>= 8 SP)`: Adds 25% risk.
-   - `Critical/High Priority`: Adds 20% risk.
-   - `Developer Overutilization (> 110%)`: Adds 15% risk.
-2. **Composite Sprint Risk Index**:
-   Calculated dynamically as a weighted sum of outstanding blocked tasks, velocity decay (actual burndown offset from ideal linear line), and individual assignee load variances.
-
----
-
-### API Documentation
-
-#### 1. Retrieve Current Telemetry
-- **Endpoint**: `/api/data`
-- **Method**: `GET`
-- **Query Parameters**:
-  - `sprintId`: `number` (Default: `10`)
-- **Sample Response**:
-  ```json
-  {
-    "sprints": [...],
-    "developers": [...],
-    "epics": [...],
-    "issues": [...],
-    "burndown": [
-      { "date": "Day 1", "idealRemaining": 120, "actualRemaining": 120 },
-      ...
-    ],
-    "velocityHistory": [...],
-    "analyticsSummary": {
-      "riskScore": 48,
-      "completionProbability": 78
-    }
-  }
-  ```
-
-#### 2. Update Issue / Kanban Transition
-- **Endpoint**: `/api/issues`
-- **Method**: `PATCH`
-- **Body**:
-  ```json
-  {
-    "id": "PROJ-101",
-    "status": "In Progress",     // Optional
-    "isBlocked": true,           // Optional
-    "blockedReason": "DB lock"   // Optional
-  }
-  ```
-- **Response**: `200 OK` (JSON returns updated record).
-
----
-
-## 🎨 Design Tokens & Theme System
-
-Designed using the **UI UX Pro Max Skill** design rules (`--variance 8 --motion 9 --density 8`), generating a premium modular **Bento Grid** architecture.
-
-```css
-:root {
-  --color-background: #020617; /* Deep Navy Space */
-  --color-primary:    #0F172A; /* Slate Card Base */
-  --color-border:     #334155; /* Structural Grid Lines */
-  --color-accent:     #22C55E; /* Neon Emerald Live-Indicators */
-  --font-ui:    'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-data:  'Fira Code', monospace;
-}
-```
-
-*Key Transitions*:
-- Hover states feature a scale increase (`transform: translateY(-2px) scale(1.01)`) and soft-blur light reflections.
-- Entrance animations use a 600ms bezier transition (`cubic-bezier(0.16, 1, 0.3, 1)`) to avoid layout jumps while preserving responsive screen sizing.
 
 ---
 

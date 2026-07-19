@@ -11,6 +11,7 @@ export default function Home() {
   const stageRef = useRef<HTMLElement>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [terminalRows, setTerminalRows] = useState<number>(0);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Terminal boot log simulation
   useEffect(() => {
@@ -114,13 +115,18 @@ export default function Home() {
     };
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsAuthenticating(true);
-    // Simulate authentication delay before redirecting to dashboard
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 800);
+    const formData = new FormData(e.currentTarget);
+    if (formData.get('handle') === 'admin' && formData.get('pass') === 'admin') {
+      setErrorMsg('');
+      setIsAuthenticating(true);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 800);
+    } else {
+      setErrorMsg('Invalid credentials. Please use admin / admin.');
+    }
   };
 
   return (
@@ -182,10 +188,10 @@ export default function Home() {
 
           <form autoComplete="off" onSubmit={handleLogin}>
             <div className="field">
-              <label htmlFor="handle">Operator ID / Email</label>
+              <label htmlFor="handle">Operator ID</label>
               <div className="input-wrap">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
-                <input id="handle" type="text" placeholder="you@domain.com" required defaultValue="admin@sentry.io" />
+                <input id="handle" name="handle" type="text" placeholder="admin" required defaultValue="admin" />
               </div>
             </div>
 
@@ -193,7 +199,7 @@ export default function Home() {
               <label htmlFor="pass">Passphrase</label>
               <div className="input-wrap">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input id="pass" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required defaultValue="password123" />
+                <input id="pass" name="pass" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required defaultValue="admin" />
                 <button type="button" className="toggle-visibility" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
@@ -204,6 +210,8 @@ export default function Home() {
               <label className="checkline"><input type="checkbox" defaultChecked /> Keep this device trusted</label>
               <a href="#" className="link">Forgot passphrase?</a>
             </div>
+
+            {errorMsg && <div style={{ color: 'var(--danger)', fontSize: '13px', marginTop: '4px' }}>{errorMsg}</div>}
 
             <button type="submit" className="btn-primary" disabled={isAuthenticating}>
               <span className="shine"></span>
