@@ -52,6 +52,97 @@
 }
 
 /* ══════════════════════════════════════════
+   LIGHT THEME TOKEN OVERRIDES
+   Applied when <html class="light"> is set
+══════════════════════════════════════════ */
+html.light {
+  --color-background: #f1f5f9;
+  --color-primary:    rgba(255, 255, 255, 0.85);
+  --color-secondary:  rgba(241, 245, 249, 0.90);
+  --color-accent:     #16a34a;
+  --color-foreground: #0f172a;
+  --color-muted:      #e2e8f0;
+  --color-border:     #cbd5e1;
+  --color-destructive:#dc2626;
+  --color-ring:       #e2e8f0;
+
+  --green:      #16a34a;
+  --green-dim:  rgba(22, 163, 74, 0.12);
+  --green-glow: rgba(22, 163, 74, 0.20);
+
+  --indigo:     #4f46e5;
+  --indigo-dim: rgba(79, 70, 229, 0.10);
+  --indigo-glow:rgba(79, 70, 229, 0.20);
+
+  --amber:      #d97706;
+  --amber-dim:  rgba(217, 119, 6, 0.12);
+
+  --rose:       #dc2626;
+  --rose-dim:   rgba(220, 38, 38, 0.10);
+  --rose-glow:  rgba(220, 38, 38, 0.18);
+
+  --sky:        #0284c7;
+  --sky-dim:    rgba(2, 132, 199, 0.10);
+
+  --violet:     #7c3aed;
+  --violet-dim: rgba(124, 58, 237, 0.10);
+}
+
+/* Light-theme body background */
+html.light body {
+  background: var(--color-background);
+  color:      var(--color-foreground);
+}
+
+/* Light theme grid overlay */
+html.light body::before {
+  background-image:
+    linear-gradient(rgba(148,163,184,0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,0.25) 1px, transparent 1px);
+}
+
+/* Light theme ambient orb — subtle */
+html.light body::after {
+  background: radial-gradient(circle, rgba(79,70,229,0.05) 0%, transparent 65%);
+}
+
+/* Light theme bento cards */
+html.light .bento {
+  background:    rgba(255, 255, 255, 0.85);
+  border:        1px solid rgba(203, 213, 225, 0.80);
+  backdrop-filter: blur(16px);
+  box-shadow:    0 2px 16px rgba(15,23,42,0.06);
+}
+html.light .bento:hover {
+  border-color: rgba(79,70,229,0.30);
+  box-shadow:   0 0 0 1px rgba(79,70,229,0.10), 0 16px 40px rgba(15,23,42,0.12);
+}
+html.light .bento::before {
+  background: linear-gradient(145deg, rgba(255,255,255,0.60) 0%, transparent 55%, rgba(255,255,255,0.20) 100%);
+}
+
+/* Light theme nav sidebar */
+html.light .nav-link { color: #475569; }
+html.light .nav-link:hover { background: rgba(79,70,229,0.07); color: #1e293b; }
+html.light .nav-link-active { background: rgba(79,70,229,0.10); color: #1e293b; }
+
+/* Light theme divider lines */
+html.light .g-line { border-color: rgba(203, 213, 225, 0.60); }
+
+/* Light theme control elements */
+html.light .ctrl {
+  background: rgba(255, 255, 255, 0.80);
+  border-color: rgba(203, 213, 225, 0.80);
+  color: #1e293b;
+}
+
+/* Light theme scrollbar */
+html.light ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.50); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(79,70,229,0.40); }
+
+
+
+/* ══════════════════════════════════════════
    RESET & BASE
 ══════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

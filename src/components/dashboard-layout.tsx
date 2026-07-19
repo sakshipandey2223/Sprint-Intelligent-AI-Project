@@ -5,7 +5,7 @@ import Navigation from './navigation';
 import CopilotDrawer from './copilot-drawer';
 import { useAppStore } from '@/lib/store';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Bell, ChevronDown, Database, Cpu, RefreshCw, Palette } from 'lucide-react';
+import { Search, Bell, ChevronDown, Database, Cpu, RefreshCw, Palette, Sun, Moon } from 'lucide-react';
 
 const themeColors = {
   'cyber-pulse': {
@@ -46,7 +46,7 @@ const themeColors = {
   },
 };
 
-function ThemeBackground({ visualTheme }: { visualTheme: string }) {
+function ThemeBackground({ visualTheme, isLight }: { visualTheme: string; isLight: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -104,6 +104,15 @@ function ThemeBackground({ visualTheme }: { visualTheme: string }) {
     };
   }, [visualTheme]);
 
+  if (isLight) {
+    return (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 bg-[#f1f5f9]">
+        <div className="absolute top-[-15%] right-[-5%] w-[700px] h-[700px] bg-[radial-gradient(circle,rgba(79,70,229,0.06)_0%,transparent_65%)] animate-float-slow" style={{ animationDuration: '22s' }} />
+        <div className="absolute bottom-[-10%] left-[-5%] w-[650px] h-[650px] bg-[radial-gradient(circle,rgba(22,163,74,0.05)_0%,transparent_65%)] animate-float-slow" style={{ animationDuration: '18s', animationDelay: '-5s' }} />
+      </div>
+    );
+  }
+
   if (visualTheme === 'cyber-pulse') {
     return (
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 bg-[#020617]">
@@ -145,7 +154,19 @@ function ThemeBackground({ visualTheme }: { visualTheme: string }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { activeSprintId, setActiveSprintId, filters, setFilter, visualTheme, setVisualTheme } = useAppStore();
+  const { activeSprintId, setActiveSprintId, filters, setFilter, visualTheme, setVisualTheme, theme, setTheme } = useAppStore();
+  const isLight = theme === 'light';
+
+  // Sync theme class onto <html> so globals.css html.light rules apply
+  useEffect(() => {
+    if (isLight) {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  }, [isLight]);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['dashboard-data', activeSprintId],
@@ -165,11 +186,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         fontFamily: 'var(--font-ui)',
         position: 'relative',
         transition: 'background 400ms ease, color 400ms ease',
-        ...(themeColors[visualTheme || 'cyber-pulse'] as React.CSSProperties)
+        ...(isLight ? {} : (themeColors[visualTheme || 'cyber-pulse'] as React.CSSProperties))
       }}
     >
       {/* Dynamic Animated Theme Background */}
-      <ThemeBackground visualTheme={visualTheme || 'cyber-pulse'} />
+      <ThemeBackground visualTheme={visualTheme || 'cyber-pulse'} isLight={isLight} />
 
       <Navigation />
 
@@ -299,6 +320,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Divider */}
             <div style={{ width: '1px', height: '22px', background: 'rgba(51,65,85,0.50)' }} />
 
+            {/* Light/Dark mode toggle */}
+            <button
+              onClick={() => setTheme(isLight ? 'dark' : 'light')}
+              title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              style={{
+                width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer',
+                background: isLight ? 'rgba(79,70,229,0.10)' : 'rgba(30,41,59,0.50)',
+                border: `1px solid ${isLight ? 'rgba(79,70,229,0.30)' : 'rgba(51,65,85,0.50)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: isLight ? '#4f46e5' : '#94a3b8', transition: 'all 200ms ease',
+              }}
+            >
+              {isLight ? <Sun style={{ width: '14px', height: '14px' }} /> : <Moon style={{ width: '13px', height: '13px' }} />}
+            </button>
+
             {/* Refresh */}
             <button
               onClick={() => refetch()}
@@ -331,6 +367,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }} />
             </button>
           </div>
+
         </header>
 
         {/* Page content */}
