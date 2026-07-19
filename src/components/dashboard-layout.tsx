@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div style={{
+    <div className="dashboard-wrapper" style={{
       display: 'flex', width: '100vw', height: '100vh', overflow: 'hidden',
       background: 'var(--color-background)',
       color: 'var(--color-foreground)',
@@ -181,7 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <Navigation />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', position: 'relative', zIndex: 10 }}>
+      <div className="dashboard-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', position: 'relative', zIndex: 10 }}>
 
         {/* ── TOP HEADER ────────────────────────────── */}
         <header style={{

@@ -46,7 +46,7 @@ export default function Navigation() {
   const isLight = theme === 'light';
 
   return (
-    <aside style={{
+    <aside className="mobile-sidebar" style={{
       width: '236px', flexShrink: 0, height: '100vh', position: 'sticky', top: 0,
       display: 'flex', flexDirection: 'column',
       background: isLight ? 'rgba(255,255,255,0.95)' : 'rgba(2, 6, 23, 0.95)',

@@ -841,3 +841,31 @@ body::after {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- Mobile Responsiveness for Dashboard --- */
+@media (max-width: 880px) {
+  .dashboard-wrapper {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100vh !important;
+  }
+  .mobile-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    position: relative !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .dashboard-content {
+    flex: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    min-height: 100vh !important;
+  }
+  /* Hide some nav items on mobile by making the sidebar compact */
+  .mobile-sidebar > div:nth-child(2) {
+    max-height: 250px;
+    overflow-y: auto;
+  }
+}

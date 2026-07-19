@@ -67,8 +67,9 @@
 }
 
 @media (max-width: 880px){
-  .sentry-login-wrapper .shell { grid-template-columns: 1fr; height:auto; width:96vw; }
-  .sentry-login-wrapper .stage { min-height:280px; }
+  .sentry-login-wrapper .shell { grid-template-columns: 1fr; height:auto; width:94vw; margin: 20px 0; border-radius: 12px; }
+  .sentry-login-wrapper .stage { display: none; }
+  .sentry-login-wrapper .panel { padding: 32px 24px !important; }
 }
 
 /* =========================================================
