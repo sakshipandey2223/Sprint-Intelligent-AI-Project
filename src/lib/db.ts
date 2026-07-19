@@ -3,11 +3,17 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
 import { generateDashboardData } from './data-generator';
 
-const DB_PATH = path.join(process.cwd(), 'sprint_intelligence.db');
+const DB_PATH = process.env.HOME ? path.join(process.env.HOME, 'data', 'sprint_intelligence.db') : path.join(process.cwd(), 'sprint_intelligence.db');
 let databaseInstance: DatabaseSync | null = null;
 
 export function getDB(): DatabaseSync {
   if (databaseInstance) return databaseInstance;
+
+  const fs = require('fs');
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
   const db = new DatabaseSync(DB_PATH);
   databaseInstance = db;
