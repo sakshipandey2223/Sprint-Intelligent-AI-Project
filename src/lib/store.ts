@@ -22,6 +22,7 @@ interface AppState {
   isCopilotOpen: boolean;
   copilotMessages: Message[];
   theme: 'dark' | 'light';
+  visualTheme: 'cyber-pulse' | 'aurora-nebula' | 'emerald-matrix' | 'royal-sunset';
   setActiveSprintId: (id: number) => void;
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
@@ -29,6 +30,7 @@ interface AppState {
   addCopilotMessage: (sender: 'user' | 'bot', text: string) => void;
   clearCopilotHistory: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
+  setVisualTheme: (visualTheme: 'cyber-pulse' | 'aurora-nebula' | 'emerald-matrix' | 'royal-sunset') => void;
 }
 
 const initialFilters: FilterState = {
@@ -67,6 +69,7 @@ export const useAppStore = create<AppState>((set) => ({
   isCopilotOpen: false,
   copilotMessages: [initialWelcomeMessage],
   theme: 'dark',
+  visualTheme: 'cyber-pulse',
 
   setActiveSprintId: (id) => set({ activeSprintId: id }),
   
@@ -101,4 +104,5 @@ export const useAppStore = create<AppState>((set) => ({
   clearCopilotHistory: () => set({ copilotMessages: [initialWelcomeMessage] }),
 
   setTheme: (theme) => set({ theme }),
+  setVisualTheme: (visualTheme) => set({ visualTheme }),
 }));

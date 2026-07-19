@@ -120,6 +120,15 @@ body::after {
   100% { transform: translate(-120px, -80px) scale(1.15); }
 }
 
+.animate-float-slow {
+  animation: float-slow 20s ease-in-out infinite alternate;
+}
+@keyframes float-slow {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(60px, 40px) scale(1.1); }
+  100% { transform: translate(-30px, -20px) scale(0.95); }
+}
+
 /* ══════════════════════════════════════════
    SCROLLBAR
 ══════════════════════════════════════════ */
