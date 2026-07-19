@@ -245,6 +245,22 @@ export default function Navigation() {
         <GitBranch style={{ width: '13px', height: '13px', color: '#475569', flexShrink: 0 }} />
       </div>
 
+      {/* ── Log Off ── */}
+      <div style={{ padding: '0 10px 14px' }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <button style={{
+            width: '100%', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+            background: 'transparent', border: '1px solid rgba(239,68,68,0.3)',
+            color: '#ef4444', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+            transition: 'all 200ms ease',
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log Off
+          </button>
+        </Link>
+      </div>
+
       <style>{`
         @keyframes pulse-live {
           0%, 100% { box-shadow: 0 0 8px rgba(34,197,94,0.80); opacity: 1; }

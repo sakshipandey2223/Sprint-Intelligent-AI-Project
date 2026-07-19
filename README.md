@@ -1,4 +1,4 @@
-# 🚀 Sprint Intelligent KPI Tracking Agent (AG-UC-0010)
+# Sprint Intelligent KPI Tracking Agent (AG-UC-0010)
 
 > An enterprise-grade AI dashboard & KPI tracking agent designed for engineering managers. It aggregates sprint telemetry, calculates real-time delivery risk using a composite AI engine, and delivers interactive analytics via a premium bento-grid interface.
 
@@ -16,9 +16,13 @@
 
 <br/>
 
+**Check my app link:** [https://sprint-kpi-dashboard-czaxdkc4fecgh9an.centralindia-01.azurewebsites.net](https://sprint-kpi-dashboard-czaxdkc4fecgh9an.centralindia-01.azurewebsites.net)
+
+<br/>
+
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 1. [DevOps & CI/CD Architecture (NEW)](#-devops--cicd-architecture-new)
 2. [System Architecture (HLD)](#-system-architecture-hld)
 3. [Component Specification & Data Flow (HLD)](#-component-specification--data-flow-hld)
@@ -27,7 +31,7 @@
 
 ---
 
-## 🚀 DevOps & CI/CD Architecture (NEW)
+## DevOps & CI/CD Architecture (NEW)
 
 This project features a **fully automated, Zero-Downtime Deployment Pipeline** built on GitHub Actions and Microsoft Azure App Service.
 
@@ -74,7 +78,7 @@ sequenceDiagram
 
 ---
 
-## 🏛 System Architecture (HLD)
+## System Architecture (HLD)
 
 The project follows a modern **Server-less / Micro-monolith hybrid architecture** powered by Next.js 16. It leverages Next.js App Router for server-rendered page layouts, React-Query for robust client-side state caching, and native Node.js SQLite (`node:sqlite`) for data persistence.
 
@@ -118,7 +122,7 @@ graph TD
 
 ---
 
-## 🔄 Component Specification & Data Flow (HLD)
+## Component Specification & Data Flow (HLD)
 
 ### 1. Unified State Flow
 The user interacts with the sidebar navigation, filters, or active sprint selector. When these options change:
@@ -129,7 +133,7 @@ The user interacts with the sidebar navigation, filters, or active sprint select
 
 ---
 
-## 🛠 Low-Level Design (LLD)
+## Low-Level Design (LLD)
 
 ### Database Schema
 
@@ -205,7 +209,7 @@ CREATE TABLE IF NOT EXISTS issues (
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Installation
 

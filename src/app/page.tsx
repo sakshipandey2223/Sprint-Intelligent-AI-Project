@@ -191,7 +191,7 @@ export default function Home() {
               <label htmlFor="handle">Operator ID</label>
               <div className="input-wrap">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
-                <input id="handle" name="handle" type="text" placeholder="admin" required defaultValue="admin" />
+                <input id="handle" name="handle" type="text" placeholder="admin" required />
               </div>
             </div>
 
@@ -199,7 +199,7 @@ export default function Home() {
               <label htmlFor="pass">Passphrase</label>
               <div className="input-wrap">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input id="pass" name="pass" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required defaultValue="admin" />
+                <input id="pass" name="pass" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required />
                 <button type="button" className="toggle-visibility" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
