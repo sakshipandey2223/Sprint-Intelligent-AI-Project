@@ -140,6 +140,52 @@ html.light .ctrl {
 html.light ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.50); }
 html.light ::-webkit-scrollbar-thumb:hover { background: rgba(79,70,229,0.40); }
 
+/* Light theme header */
+html.light header {
+  background: rgba(255,255,255,0.95) !important;
+  border-bottom-color: rgba(203,213,225,0.80) !important;
+}
+
+/* Light theme search input */
+html.light input[type="text"] {
+  background: rgba(241,245,249,0.90) !important;
+  border-color: rgba(203,213,225,0.80) !important;
+  color: #1e293b !important;
+}
+html.light input[type="text"]::placeholder { color: #94a3b8 !important; }
+
+/* Light theme inline cards (dashboard page uses var(--color-primary) inline) */
+html.light [style*="color-primary"] {
+  background: rgba(255,255,255,0.90) !important;
+}
+
+/* Light theme table header bg uses var(--color-secondary) */
+html.light [style*="color-secondary"] {
+  background: rgba(241,245,249,0.90) !important;
+}
+
+/* Light theme table row border */
+html.light [style*="color-border"] {
+  border-color: rgba(203,213,225,0.70) !important;
+}
+
+/* Light theme muted secondary text — make slightly darker so readable */
+html.light [style*="color: '#94a3b8'"],
+html.light [style*="color: '#64748b'"] {
+  color: #64748b !important;
+}
+
+/* Light theme inner inline card backgrounds */
+html.light [style*="rgba(15,23,42"] {
+  background: rgba(241,245,249,0.90) !important;
+  border-color: rgba(203,213,225,0.70) !important;
+}
+html.light [style*="rgba(30,41,59"] {
+  background: rgba(241,245,249,0.90) !important;
+  border-color: rgba(203,213,225,0.70) !important;
+}
+
+
 
 
 /* ══════════════════════════════════════════

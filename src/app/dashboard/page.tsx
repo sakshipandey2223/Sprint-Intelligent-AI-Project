@@ -54,7 +54,26 @@ const statusColor: Record<string, { bg: string; text: string; dot: string }> = {
 };
 
 export default function Dashboard() {
-  const { activeSprintId, toggleCopilot } = useAppStore();
+  const { activeSprintId, toggleCopilot, theme } = useAppStore();
+  const isLight = theme === 'light';
+
+  // Theme-aware color tokens for inline styles
+  const c = {
+    card:       isLight ? 'rgba(255,255,255,0.95)' : 'rgba(15,23,42,0.70)',
+    cardBorder: isLight ? 'rgba(203,213,225,0.80)' : 'rgba(51,65,85,0.60)',
+    tableHead:  isLight ? 'rgba(241,245,249,0.95)' : 'rgba(15,23,42,0.60)',
+    rowBorder:  isLight ? 'rgba(203,213,225,0.60)' : 'rgba(51,65,85,0.40)',
+    rowHover:   isLight ? 'rgba(79,70,229,0.05)'   : 'rgba(99,102,241,0.05)',
+    text:       isLight ? '#0f172a'  : '#f8fafc',
+    textMuted:  isLight ? '#64748b'  : '#94a3b8',
+    textFaint:  isLight ? '#94a3b8'  : '#64748b',
+    divider:    isLight ? 'rgba(203,213,225,0.70)' : 'rgba(51,65,85,0.50)',
+    progressBg: isLight ? 'rgba(203,213,225,0.60)' : 'rgba(51,65,85,0.40)',
+    innerBg:    isLight ? 'rgba(241,245,249,0.80)' : 'rgba(30,41,59,0.50)',
+    statBar:    isLight ? 'rgba(255,255,255,0.95)' : 'var(--color-primary)',
+    statBorder: isLight ? 'rgba(203,213,225,0.80)' : 'var(--color-border)',
+    statDiv:    isLight ? 'rgba(203,213,225,0.80)' : 'var(--color-border)',
+  };
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-data', activeSprintId],
     queryFn: async () => {
@@ -118,10 +137,10 @@ export default function Dashboard() {
         {/* ── PAGE HEADER ───────────────────────────────── */}
         <motion.div variants={item} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8', letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted, letterSpacing: '0.10em', textTransform: 'uppercase', marginBottom: '4px' }}>
               Dashboard › Sprint {activeSprintId}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-ui)', fontSize: '22px', fontWeight: 800, color: 'var(--color-foreground)', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontFamily: 'var(--font-ui)', fontSize: '22px', fontWeight: 800, color: c.text, letterSpacing: '-0.02em' }}>
               Project
             </h1>
           </div>
@@ -198,15 +217,15 @@ export default function Dashboard() {
                 {stat.icon}
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--font-ui)', fontSize: '26px', fontWeight: 800, color: 'var(--color-foreground)', lineHeight: 1.1 }}>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: '26px', fontWeight: 800, color: c.text, lineHeight: 1.1 }}>
                   {stat.value}
                 </div>
-                <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{stat.label}</div>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: c.textMuted, marginTop: '2px' }}>{stat.label}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                   {stat.trend === 'up'
                     ? <ArrowUpRight style={{ width: '11px', height: '11px', color: '#22c55e' }} />
                     : <ArrowDownRight style={{ width: '11px', height: '11px', color: '#ef4444' }} />}
-                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#64748b' }}>{stat.sub}</span>
+                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textFaint }}>{stat.sub}</span>
                 </div>
               </div>
             </div>
@@ -221,7 +240,7 @@ export default function Dashboard() {
             background: 'var(--color-primary)', border: '1px solid var(--color-border)',
             borderRadius: '16px', padding: '20px',
           }}>
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: 'var(--color-foreground)', marginBottom: '14px' }}>
+            <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: c.text, marginBottom: '14px' }}>
               Velocity Distribution
             </div>
             <div style={{ height: '180px' }}>
@@ -241,7 +260,7 @@ export default function Dashboard() {
               {[{ color: '#6366f1', label: 'Utilization' }].map(l => (
                 <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: l.color }} />
-                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8' }}>{l.label}</span>
+                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted }}>{l.label}</span>
                 </div>
               ))}
             </div>
@@ -252,7 +271,7 @@ export default function Dashboard() {
             background: 'var(--color-primary)', border: '1px solid var(--color-border)',
             borderRadius: '16px', padding: '20px',
           }}>
-            <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: 'var(--color-foreground)', marginBottom: '14px' }}>
+            <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: c.text, marginBottom: '14px' }}>
               Issue Distribution
             </div>
             <div style={{ height: '180px' }}>
@@ -274,7 +293,7 @@ export default function Dashboard() {
               {pieData.map((d: any, idx: number) => (
                 <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: PIE_COLORS[idx % PIE_COLORS.length] }} />
-                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: '#94a3b8' }}>{d.name}</span>
+                  <span style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: c.textMuted }}>{d.name}</span>
                 </div>
               ))}
             </div>
@@ -286,17 +305,17 @@ export default function Dashboard() {
             borderRadius: '16px', padding: '20px',
           }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: 'var(--color-foreground)' }}>
+              <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: c.text }}>
                 Sprint Burndown
               </div>
               <div style={{ display: 'flex', gap: '18px' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: '22px', fontWeight: 800, color: '#6366f1' }}>{S.completedPoints}</div>
-                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: '#94a3b8' }}>Points Done</div>
+                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: c.textMuted }}>Points Done</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: '22px', fontWeight: 800, color: '#22d3ee' }}>{issues.length}</div>
-                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: '#94a3b8' }}>Total Issues</div>
+                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: c.textMuted }}>Total Issues</div>
                 </div>
               </div>
             </div>
@@ -327,7 +346,7 @@ export default function Dashboard() {
               ].map(s => (
                 <div key={s.label} style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: '16px', fontWeight: 800, color: s.color }}>{s.value}</div>
-                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: '#94a3b8', marginTop: '2px' }}>{s.label}</div>
+                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: c.textMuted, marginTop: '2px' }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -364,12 +383,12 @@ export default function Dashboard() {
               borderRadius: '16px', padding: '20px 22px',
             }}>
               <div style={{ fontFamily: 'var(--font-ui)', fontSize: '24px', fontWeight: 800, color: card.color }}>{card.value}</div>
-              <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', color: 'var(--color-foreground)', fontWeight: 600, marginTop: '5px' }}>{card.label}</div>
+                <div style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', color: c.text, fontWeight: 600, marginTop: '5px' }}>{card.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '6px' }}>
                 {card.dir === 'up'
                   ? <ArrowUpRight style={{ width: '11px', height: '11px', color: '#22c55e' }} />
                   : <ArrowDownRight style={{ width: '11px', height: '11px', color: '#ef4444' }} />}
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8' }}>{card.sub}</span>
+                <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted }}>{card.sub}</span>
               </div>
             </div>
           ))}
@@ -386,9 +405,9 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px rgba(34,197,94,0.60)' }} />
-                <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: 'var(--color-foreground)' }}>Epic Progress</span>
+                <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: c.text }}>Epic Progress</span>
               </div>
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8' }}>This Sprint</span>
+              <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted }}>This Sprint</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', flex: 1 }}>
               {epics.map((epic: any) => (
@@ -396,7 +415,7 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '7px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ width: '8px', height: '8px', borderRadius: '3px', background: epic.color, flexShrink: 0 }} />
-                      <span style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600, color: 'var(--color-foreground)' }}>{epic.name}</span>
+                      <span style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600, color: c.text }}>{epic.name}</span>
                     </div>
                     <span style={{ fontFamily: 'var(--font-data)', fontSize: '11px', fontWeight: 700, color: epic.color }}>{epic.progress}%</span>
                   </div>
@@ -408,7 +427,7 @@ export default function Dashboard() {
                       transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
                     />
                   </div>
-                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>
+                  <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted, marginTop: '4px' }}>
                     {epic.completedPoints} / {epic.totalPoints} SP
                   </div>
                 </div>
@@ -424,9 +443,9 @@ export default function Dashboard() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#6366f1', boxShadow: '0 0 6px rgba(99,102,241,0.60)' }} />
-                <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: 'var(--color-foreground)' }}>Developer Performance</span>
+                <span style={{ fontFamily: 'var(--font-ui)', fontSize: '13px', fontWeight: 700, color: c.text }}>Developer Performance</span>
               </div>
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8' }}>This Sprint</span>
+              <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted }}>This Sprint</span>
             </div>
 
             {/* Table header */}
@@ -435,11 +454,11 @@ export default function Dashboard() {
               gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr 1fr',
               padding: '8px 12px',
               borderRadius: '8px',
-              background: 'var(--color-secondary)',
+              background: c.tableHead,
               marginBottom: '8px',
             }}>
               {['DEVELOPER', 'ROLE', 'DONE', 'TOTAL', 'COMPLETION', 'STATUS'].map(h => (
-                <span key={h} style={{ fontFamily: 'var(--font-data)', fontSize: '9px', fontWeight: 700, color: '#64748b', letterSpacing: '0.08em' }}>{h}</span>
+                <span key={h} style={{ fontFamily: 'var(--font-data)', fontSize: '9px', fontWeight: 700, color: c.textMuted, letterSpacing: '0.08em' }}>{h}</span>
               ))}
             </div>
 
@@ -472,26 +491,26 @@ export default function Dashboard() {
                         border: '2px solid var(--color-border)', objectFit: 'cover', flexShrink: 0,
                       }} />
                       <div>
-                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: 'var(--color-foreground)' }}>{dev.name}</div>
-                        <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: '#94a3b8' }}>{dev.location || 'Remote'}</div>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: c.text }}>{dev.name}</div>
+                        <div style={{ fontFamily: 'var(--font-data)', fontSize: '9px', color: c.textMuted }}>{dev.location || 'Remote'}</div>
                       </div>
                     </div>
 
                     {/* Role */}
-                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: '#64748b' }}>{dev.role}</span>
+                    <span style={{ fontFamily: 'var(--font-ui)', fontSize: '11px', color: c.textMuted }}>{dev.role}</span>
 
                     {/* Done */}
-                    <span style={{ fontFamily: 'var(--font-data)', fontSize: '12px', fontWeight: 700, color: 'var(--color-foreground)' }}>{dev.done}</span>
+                    <span style={{ fontFamily: 'var(--font-data)', fontSize: '12px', fontWeight: 700, color: c.text }}>{dev.done}</span>
 
                     {/* Total */}
-                    <span style={{ fontFamily: 'var(--font-data)', fontSize: '12px', color: '#94a3b8' }}>{dev.total}</span>
+                    <span style={{ fontFamily: 'var(--font-data)', fontSize: '12px', color: c.textMuted }}>{dev.total}</span>
 
                     {/* Progress bar */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ flex: 1, height: '5px', borderRadius: '99px', background: 'var(--color-border)', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${dev.pct}%`, borderRadius: '99px', background: '#6366f1', transition: 'width 0.8s ease' }} />
                       </div>
-                      <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#94a3b8', minWidth: '28px' }}>{dev.pct}%</span>
+                      <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: c.textMuted, minWidth: '28px' }}>{dev.pct}%</span>
                     </div>
 
                     {/* Status pill */}

@@ -42,14 +42,15 @@ const groups = [
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { toggleCopilot, isCopilotOpen } = useAppStore();
+  const { toggleCopilot, isCopilotOpen, theme } = useAppStore();
+  const isLight = theme === 'light';
 
   return (
     <aside style={{
       width: '236px', flexShrink: 0, height: '100vh', position: 'sticky', top: 0,
       display: 'flex', flexDirection: 'column',
-      background: 'rgba(2, 6, 23, 0.95)',
-      borderRight: '1px solid rgba(51,65,85,0.50)',
+      background: isLight ? 'rgba(255,255,255,0.95)' : 'rgba(2, 6, 23, 0.95)',
+      borderRight: isLight ? '1px solid rgba(203,213,225,0.80)' : '1px solid rgba(51,65,85,0.50)',
       backdropFilter: 'blur(20px)',
       zIndex: 20,
     }}>
@@ -57,7 +58,7 @@ export default function Navigation() {
       {/* ── Brand ── */}
       <div style={{
         padding: '18px 16px 14px',
-        borderBottom: '1px solid rgba(51,65,85,0.40)',
+        borderBottom: isLight ? '1px solid rgba(203,213,225,0.60)' : '1px solid rgba(51,65,85,0.40)',
         display: 'flex', alignItems: 'center', gap: '12px',
       }}>
         {/* Logo mark */}
@@ -72,7 +73,7 @@ export default function Navigation() {
         <div style={{ overflow: 'hidden' }}>
           <div style={{
             fontFamily: 'var(--font-ui)', fontSize: '14px', fontWeight: 800,
-            color: '#F8FAFC', letterSpacing: '-0.02em', lineHeight: 1.2,
+            color: isLight ? '#0f172a' : '#F8FAFC', letterSpacing: '-0.02em', lineHeight: 1.2,
           }}>
             Sprint Intel
           </div>
@@ -101,7 +102,7 @@ export default function Navigation() {
             {/* Group label */}
             <div style={{
               fontFamily: 'var(--font-data)', fontSize: '9px', fontWeight: 700,
-              color: 'rgba(71,85,105,0.70)', letterSpacing: '0.14em',
+              color: isLight ? 'rgba(71,85,105,0.90)' : 'rgba(71,85,105,0.70)', letterSpacing: '0.14em',
               textTransform: 'uppercase', padding: '0 4px 6px',
             }}>
               {g.label}
@@ -131,8 +132,8 @@ export default function Navigation() {
                       <div style={{
                         width: '30px', height: '30px', borderRadius: '8px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: active ? 'rgba(99,102,241,0.15)' : 'rgba(51,65,85,0.20)',
-                        border: `1px solid ${active ? 'rgba(99,102,241,0.30)' : 'rgba(51,65,85,0.30)'}`,
+                        background: active ? 'rgba(99,102,241,0.15)' : isLight ? 'rgba(100,116,139,0.10)' : 'rgba(51,65,85,0.20)',
+                        border: `1px solid ${active ? 'rgba(99,102,241,0.30)' : isLight ? 'rgba(203,213,225,0.60)' : 'rgba(51,65,85,0.30)'}`,
                         transition: 'all 200ms ease',
                       }}>
                         <item.icon style={{
@@ -147,7 +148,7 @@ export default function Navigation() {
                         <div style={{
                           fontFamily: 'var(--font-ui)', fontSize: '12.5px',
                           fontWeight: active ? 700 : 500, lineHeight: 1.25,
-                          color: active ? '#F8FAFC' : '#475569',
+                          color: active ? (isLight ? '#1e293b' : '#F8FAFC') : '#64748b',
                           transition: 'color 200ms ease',
                         }}>
                           {item.name}
@@ -183,7 +184,7 @@ export default function Navigation() {
       </div>
 
       {/* ── AI Copilot ── */}
-      <div style={{ padding: '10px', borderTop: '1px solid rgba(51,65,85,0.40)' }}>
+      <div style={{ padding: '10px', borderTop: isLight ? '1px solid rgba(203,213,225,0.60)' : '1px solid rgba(51,65,85,0.40)' }}>
         <motion.button
           onClick={() => toggleCopilot(true)}
           whileTap={{ scale: 0.97 }}
@@ -222,7 +223,7 @@ export default function Navigation() {
       <div style={{
         padding: '10px 10px 14px',
         display: 'flex', alignItems: 'center', gap: '10px',
-        borderTop: '1px solid rgba(51,65,85,0.20)',
+        borderTop: isLight ? '1px solid rgba(203,213,225,0.40)' : '1px solid rgba(51,65,85,0.20)',
       }}>
         <img
           src="https://api.dicebear.com/8.x/avataaars/svg?seed=sakshi&backgroundColor=22C55E&backgroundType=gradientLinear"
@@ -234,7 +235,7 @@ export default function Navigation() {
           }}
         />
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: '#F8FAFC', lineHeight: 1.25 }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: isLight ? '#0f172a' : '#F8FAFC', lineHeight: 1.25 }}>
             Sakshi Pandey
           </div>
           <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#475569' }}>
