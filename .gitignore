@@ -48,3 +48,5 @@ sprint_intelligence.db
 
 # Antigravity IDE workspace
 .gemini/
+.azure/
+azure-deployment.zip

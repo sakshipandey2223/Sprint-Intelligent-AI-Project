@@ -146,44 +146,145 @@ html.light header {
   border-bottom-color: rgba(203,213,225,0.80) !important;
 }
 
-/* Light theme search input */
-html.light input[type="text"] {
+/* Light theme inputs */
+html.light input[type="text"],
+html.light input[type="search"],
+html.light textarea,
+html.light select {
   background: rgba(241,245,249,0.90) !important;
   border-color: rgba(203,213,225,0.80) !important;
   color: #1e293b !important;
 }
-html.light input[type="text"]::placeholder { color: #94a3b8 !important; }
+html.light input::placeholder,
+html.light textarea::placeholder { color: #94a3b8 !important; }
 
-/* Light theme inline cards (dashboard page uses var(--color-primary) inline) */
-html.light [style*="color-primary"] {
+/* ══════════════════════════════════════════════════════════
+   UNIVERSAL LIGHT-THEME TEXT FIX
+   Force ALL text nodes inside html.light to be dark/readable.
+   This catches all hardcoded white-ish hex colors across every
+   page without needing per-page changes.
+══════════════════════════════════════════════════════════ */
+
+/* Force page background to light */
+html.light body,
+html.light #__next,
+html.light main {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+/* All headings: force dark */
+html.light h1, html.light h2, html.light h3,
+html.light h4, html.light h5, html.light h6 {
+  color: #0f172a !important;
+}
+
+/* All paragraphs and spans that didn't get explicit colors */
+html.light p,
+html.light label { color: #334155; }
+
+/* class-based text overrides */
+html.light .section-title       { color: #0f172a !important; }
+html.light .section-eyebrow     { color: #6366f1 !important; }
+html.light .section-desc        { color: #64748b !important; }
+html.light .kpi-number          { color: #0f172a !important; }
+html.light .kpi-eyebrow         { color: #64748b !important; }
+html.light .kpi-delta-up        { color: #16a34a !important; }
+html.light .kpi-delta-down      { color: #dc2626 !important; }
+
+/* Bento card light mode */
+html.light .bento {
+  background:    rgba(255, 255, 255, 0.92) !important;
+  border:        1px solid rgba(203,213,225,0.80) !important;
+  box-shadow:    0 2px 12px rgba(15,23,42,0.06) !important;
+}
+html.light .bento:hover {
+  border-color: rgba(99,102,241,0.30) !important;
+  box-shadow:   0 8px 32px rgba(15,23,42,0.10) !important;
+}
+
+/* Nav link overrides */
+html.light .nav-link         { color: #475569 !important; }
+html.light .nav-link:hover   { background: rgba(99,102,241,0.07) !important; color: #1e293b !important; }
+html.light .nav-link-active  { background: rgba(99,102,241,0.10) !important; color: #1e293b !important; }
+
+/* ctrl (select/button controls) */
+html.light .ctrl {
   background: rgba(255,255,255,0.90) !important;
+  border-color: rgba(203,213,225,0.80) !important;
+  color: #1e293b !important;
 }
+html.light .ctrl:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
 
-/* Light theme table header bg uses var(--color-secondary) */
-html.light [style*="color-secondary"] {
-  background: rgba(241,245,249,0.90) !important;
-}
+/* ── Force inline-styled spans/divs with white-ish text to be dark ──
+   These target the most common hardcoded light text colors used across
+   all pages. The !important wins over inline style specificity.       */
 
-/* Light theme table row border */
-html.light [style*="color-border"] {
-  border-color: rgba(203,213,225,0.70) !important;
-}
+/* #f1f5f9, #e2e8f0, #f8fafc — very light greys used as text in dark mode */
+html.light span[style*="color: '#f1f5f9'"],
+html.light div[style*="color: '#f1f5f9'"],
+html.light span[style*="color: '#F1F5F9'"],
+html.light div[style*="color: '#F1F5F9'"],
+html.light span[style*="color: '#f8fafc'"],
+html.light div[style*="color: '#f8fafc'"],
+html.light span[style*="color: '#F8FAFC'"],
+html.light div[style*="color: '#F8FAFC'"] { color: #1e293b !important; }
 
-/* Light theme muted secondary text — make slightly darker so readable */
-html.light [style*="color: '#94a3b8'"],
-html.light [style*="color: '#64748b'"] {
-  color: #64748b !important;
-}
+/* Pastel accent colors — visible on dark, but wash out on white */
+html.light span[style*="color: '#fda4af'"],
+html.light div[style*="color: '#fda4af'"],
+html.light p[style*="color: '#fda4af'"]   { color: #be123c !important; }
 
-/* Light theme inner inline card backgrounds */
-html.light [style*="rgba(15,23,42"] {
-  background: rgba(241,245,249,0.90) !important;
-  border-color: rgba(203,213,225,0.70) !important;
-}
-html.light [style*="rgba(30,41,59"] {
-  background: rgba(241,245,249,0.90) !important;
-  border-color: rgba(203,213,225,0.70) !important;
-}
+html.light span[style*="color: '#fcd34d'"],
+html.light div[style*="color: '#fcd34d'"],
+html.light p[style*="color: '#fcd34d'"]   { color: #92400e !important; }
+
+html.light span[style*="color: '#a5b4fc'"],
+html.light div[style*="color: '#a5b4fc'"],
+html.light p[style*="color: '#a5b4fc'"],
+html.light span[style*="color: '#A5B4FC'"],
+html.light div[style*="color: '#A5B4FC'"] { color: #3730a3 !important; }
+
+html.light span[style*="color: '#6ee7b7'"],
+html.light div[style*="color: '#6ee7b7'"] { color: #065f46 !important; }
+
+html.light span[style*="color: '#4ade80'"],
+html.light div[style*="color: '#4ade80'"],
+html.light span[style*="color: '#4ADE80'"],
+html.light div[style*="color: '#4ADE80'"] { color: #15803d !important; }
+
+html.light span[style*="color: '#22C55E'"],
+html.light div[style*="color: '#22C55E'"],
+html.light span[style*="color: '#22c55e'"],
+html.light div[style*="color: '#22c55e'"] { color: #15803d !important; }
+
+html.light span[style*="color: '#f3f4f6'"],
+html.light div[style*="color: '#f3f4f6'"] { color: #1e293b !important; }
+
+/* Dark card backgrounds — make transparent/white in light mode */
+html.light div[style*="background: 'rgba(13,18,32"],
+html.light div[style*="background: rgba(13,18,32"] { background: rgba(255,255,255,0.92) !important; }
+html.light div[style*="background: 'rgba(15,23,42"],
+html.light div[style*="background: rgba(15,23,42"] { background: rgba(255,255,255,0.92) !important; }
+html.light div[style*="background: 'rgba(30,41,59"],
+html.light div[style*="background: rgba(30,41,59"] { background: rgba(241,245,249,0.95) !important; }
+html.light div[style*="background: 'rgba(2, 6, 23"],
+html.light div[style*="background: rgba(2, 6, 23"] { background: rgba(255,255,255,0.95) !important; }
+
+/* Pill labels */
+html.light .pill          { background: rgba(99,102,241,0.10) !important; color: #4f46e5 !important; }
+html.light .pill-rose     { background: rgba(220,38,38,0.10)  !important; color: #dc2626 !important; }
+html.light .pill-amber    { background: rgba(217,119,6,0.10)  !important; color: #92400e !important; }
+html.light .pill-green    { background: rgba(22,163,74,0.10)  !important; color: #15803d !important; }
+html.light .pill-sky      { background: rgba(2,132,199,0.10)  !important; color: #0369a1 !important; }
+
+/* CartesianGrid / chart grid lines */
+html.light .recharts-cartesian-grid line { stroke: rgba(203,213,225,0.60) !important; }
+html.light .recharts-text { fill: #64748b !important; }
+html.light .recharts-polar-grid-concentric-polygon { stroke: rgba(203,213,225,0.50) !important; }
+html.light .recharts-polar-angle-axis-tick text    { fill: #64748b !important; }
+
+
 
 
 

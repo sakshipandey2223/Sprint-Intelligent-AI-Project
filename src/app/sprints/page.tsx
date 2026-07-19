@@ -24,11 +24,11 @@ const colConfig = [
   { title: 'Done',       status: 'Done',       accent: '#10b981', glow: 'rgba(16,185,129,0.15)' },
 ];
 
-const priorityMap: Record<string, { bg: string; color: string; border: string }> = {
-  Critical: { bg: 'rgba(244,63,94,0.10)',  color: '#fda4af', border: 'rgba(244,63,94,0.25)' },
-  High:     { bg: 'rgba(245,158,11,0.10)', color: '#fcd34d', border: 'rgba(245,158,11,0.25)' },
-  Medium:   { bg: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: 'rgba(99,102,241,0.25)' },
-  Low:      { bg: 'rgba(71,85,105,0.10)',  color: '#94a3b8', border: 'rgba(71,85,105,0.25)' },
+const priorityMap: Record<string, { bg: string; color: string; border: string; lightColor: string }> = {
+  Critical: { bg: 'rgba(244,63,94,0.10)',  color: '#fda4af', border: 'rgba(244,63,94,0.25)', lightColor: '#be123c' },
+  High:     { bg: 'rgba(245,158,11,0.10)', color: '#fcd34d', border: 'rgba(245,158,11,0.25)', lightColor: '#92400e' },
+  Medium:   { bg: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: 'rgba(99,102,241,0.25)',  lightColor: '#3730a3' },
+  Low:      { bg: 'rgba(71,85,105,0.10)',  color: '#94a3b8', border: 'rgba(71,85,105,0.25)',  lightColor: '#475569' },
 };
 
 const typeMap: Record<string, string> = {
@@ -36,7 +36,8 @@ const typeMap: Record<string, string> = {
 };
 
 export default function SprintBoard() {
-  const { activeSprintId, filters, setFilter } = useAppStore();
+  const { activeSprintId, filters, setFilter, theme } = useAppStore();
+  const isLight = theme === 'light';
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -94,7 +95,7 @@ export default function SprintBoard() {
         <motion.div variants={fadeUp} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-0.02em' }}>Sprint Board</h1>
+              <h1 style={{ fontSize: '22px', fontWeight: 900, color: isLight ? '#0f172a' : '#f1f5f9', letterSpacing: '-0.02em' }}>Sprint Board</h1>
               <span className="stat-badge stat-badge-indigo">{S.name}</span>
               {S.status === 'active' && <span className="stat-badge stat-badge-emerald">● Active</span>}
             </div>
@@ -116,7 +117,7 @@ export default function SprintBoard() {
             ))}
             {(filters.epic || filters.assigneeId || filters.priority) && (
               <button onClick={() => { setFilter('epic',''); setFilter('assigneeId',''); setFilter('priority',''); }}
-                style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)', borderRadius: '8px', color: '#fda4af', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '8px 14px', cursor: 'pointer', fontWeight: 700 }}>
+                style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)', borderRadius: '8px', color: isLight ? '#be123c' : '#fda4af', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '8px 14px', cursor: 'pointer', fontWeight: 700 }}>
                 Clear
               </button>
             )}
@@ -178,12 +179,12 @@ export default function SprintBoard() {
 
                           {/* Row 1: ID + Priority */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'rgba(255,255,255,0.30)' }}>
+                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isLight ? '#64748b' : 'rgba(255,255,255,0.30)' }}>
                               {issue.id}
                             </span>
                             <span style={{
                               padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 700,
-                              fontFamily: 'var(--font-mono)', background: pStyle.bg, color: pStyle.color, border: `1px solid ${pStyle.border}`,
+                              fontFamily: 'var(--font-mono)', background: pStyle.bg, color: isLight ? (pStyle as any).lightColor || '#475569' : pStyle.color, border: `1px solid ${pStyle.border}`,
                             }}>
                               {issue.priority}
                             </span>
@@ -200,7 +201,7 @@ export default function SprintBoard() {
                               display: 'flex', alignItems: 'flex-start', gap: '6px',
                               padding: '8px 10px', borderRadius: '8px',
                               background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)',
-                              color: '#fda4af', fontSize: '10px', fontFamily: 'var(--font-mono)', lineHeight: 1.4,
+                              color: isLight ? '#be123c' : '#fda4af', fontSize: '10px', fontFamily: 'var(--font-mono)', lineHeight: 1.4,
                             }}>
                               <AlertTriangle style={{ width: '12px', height: '12px', flexShrink: 0, marginTop: '1px' }} />
                               <span>{issue.blockedReason}</span>
@@ -211,7 +212,7 @@ export default function SprintBoard() {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <img src={dev?.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.10)' }} />
-                              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.30)', fontWeight: 600 }}>{dev?.name?.split(' ')[0]}</span>
+                              <span style={{ fontSize: '10px', color: isLight ? '#64748b' : 'rgba(255,255,255,0.30)', fontWeight: 600 }}>{dev?.name?.split(' ')[0]}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: typeMap[issue.type] || '#94a3b8', textTransform: 'uppercase' }}>
@@ -220,7 +221,7 @@ export default function SprintBoard() {
                               <span style={{
                                 padding: '2px 7px', borderRadius: '5px', fontSize: '10px', fontWeight: 800,
                                 fontFamily: 'var(--font-mono)', background: 'rgba(99,102,241,0.10)',
-                                border: '1px solid rgba(99,102,241,0.20)', color: '#a5b4fc',
+                                border: '1px solid rgba(99,102,241,0.20)', color: isLight ? '#3730a3' : '#a5b4fc',
                               }}>
                                 {issue.storyPoints}
                               </span>
@@ -303,7 +304,7 @@ export default function SprintBoard() {
                     <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: e.color, flexShrink: 0 }} />
                     <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</span>
                   </div>
-                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#f1f5f9', flexShrink: 0, marginLeft: '6px' }}>{e.value}</span>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isLight ? '#0f172a' : '#f1f5f9', flexShrink: 0, marginLeft: '6px' }}>{e.value}</span>
                 </div>
               ))}
             </div>
