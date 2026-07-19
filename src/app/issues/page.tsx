@@ -41,7 +41,8 @@ const Pill = ({ text, map }: { text: string; map: Record<string, any> }) => {
 };
 
 export default function IssueExplorer() {
-  const { filters, setFilter, resetFilters } = useAppStore();
+  const { filters, setFilter, resetFilters, theme } = useAppStore();
+  const isLight = theme === 'light';
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [sprintScope, setSprintScope] = useState('10');
@@ -107,7 +108,7 @@ export default function IssueExplorer() {
         <motion.div variants={fadeUp} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#f1f5f9', letterSpacing: '-0.02em' }}>Issue Explorer</h1>
+              <h1 style={{ fontSize: '22px', fontWeight: 900, color: isLight ? '#0f172a' : '#f1f5f9', letterSpacing: '-0.02em' }}>Issue Explorer</h1>
               <span className="stat-badge stat-badge-indigo">{total} tickets</span>
             </div>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -202,7 +203,7 @@ export default function IssueExplorer() {
                     whileHover={{ backgroundColor: 'rgba(99,102,241,0.04)' }}
                   >
                     {/* Key */}
-                    <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#a5b4fc' }}>{issue.id}</div>
+                    <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isLight ? '#3730a3' : '#a5b4fc' }}>{issue.id}</div>
                     {/* Title */}
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', paddingRight: '16px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {issue.title}
@@ -215,7 +216,7 @@ export default function IssueExplorer() {
                     {/* Priority */}
                     <div><Pill text={issue.priority} map={priorityMap} /></div>
                     {/* Points */}
-                    <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: '#a5b4fc' }}>{issue.storyPoints}</div>
+                    <div style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: isLight ? '#3730a3' : '#a5b4fc' }}>{issue.storyPoints}</div>
                     {/* Assignee */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px', overflow: 'hidden' }}>
                       <img src={dev?.avatar} alt="" style={{ width: '22px', height: '22px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.10)', flexShrink: 0 }} />
@@ -296,7 +297,7 @@ export default function IssueExplorer() {
                   {/* Title */}
                   <div>
                     <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.10em', marginBottom: '8px', fontWeight: 700 }}>Issue Title</div>
-                    <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{selected.title}</h2>
+                    <h2 style={{ fontSize: '18px', fontWeight: 800, color: isLight ? '#0f172a' : '#f1f5f9', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{selected.title}</h2>
                   </div>
 
                   <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)' }} />
@@ -309,7 +310,7 @@ export default function IssueExplorer() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <img src={selDev?.avatar} alt="" style={{ width: '32px', height: '32px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.12)' }} />
                         <div>
-                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>{selDev?.name}</div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: isLight ? '#0f172a' : '#f1f5f9' }}>{selDev?.name}</div>
                           <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{selDev?.role}</div>
                         </div>
                       </div>
@@ -317,7 +318,7 @@ export default function IssueExplorer() {
                     {/* Points */}
                     <div style={{ padding: '14px', borderRadius: '10px', background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <div style={{ fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.10em', fontWeight: 700 }}>Story Points</div>
-                      <div style={{ fontSize: '28px', fontWeight: 900, fontFamily: 'var(--font-mono)', color: '#a5b4fc', lineHeight: 1 }}>{selected.storyPoints}</div>
+                      <div style={{ fontSize: '28px', fontWeight: 900, fontFamily: 'var(--font-mono)', color: isLight ? '#3730a3' : '#a5b4fc', lineHeight: 1 }}>{selected.storyPoints}</div>
                       <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>Complexity estimate</div>
                     </div>
                     {/* Epic */}
@@ -390,7 +391,7 @@ export default function IssueExplorer() {
                           }
                           <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9' }}>{c.name}</span>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: isLight ? '#0f172a' : '#f1f5f9' }}>{c.name}</span>
                               <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>{c.time}</span>
                             </div>
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>{c.text}</p>
