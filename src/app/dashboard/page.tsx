@@ -394,24 +394,41 @@ export default function Dashboard() {
           <div style={{
             padding: '22px', borderRadius: '20px',
             background: T.bg, border: `1px solid ${T.border}`,
-            boxShadow: T.shadow, display: 'flex', flexDirection: 'column', gap: '16px',
+            boxShadow: T.shadow, display: 'flex', flexDirection: 'column', gap: '14px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Header stats row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
               <div>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: T.text }}>Velocity Trend</span>
-                <p style={{ fontSize: '10px', color: T.muted, marginTop: '2px' }}>Completed story points per sprint</p>
+                <p style={{ fontSize: '10px', color: T.muted, marginTop: '2px' }}>Story points completed across sprints</p>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '24px', fontWeight: 900, color: '#6366f1', fontFamily: 'var(--font-ui)', lineHeight: 1 }}>{S.velocity}</div>
-                <div style={{ fontSize: '9px', color: T.faint, fontFamily: 'monospace', marginTop: '2px' }}>SP this sprint</div>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {[
+                  { label: 'Current', val: S.velocity, color: '#6366f1', unit: 'SP' },
+                  {
+                    label: 'Avg Velocity',
+                    val: velocityHistory.length > 0
+                      ? Math.round(velocityHistory.reduce((a: number, v: any) => a + (v.completedPoints || 0), 0) / velocityHistory.length)
+                      : 0,
+                    color: '#2dd4bf', unit: 'SP'
+                  },
+                  { label: 'Sprints', val: velocityHistory.length, color: '#f59e0b', unit: 'tracked' },
+                ].map(m => (
+                  <div key={m.label} style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: m.color, lineHeight: 1, fontFamily: 'var(--font-ui)' }}>{m.val}</div>
+                    <div style={{ fontSize: '9px', color: T.faint, fontFamily: 'monospace', marginTop: '2px' }}>{m.label}</div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div style={{ flex: 1, minHeight: '160px' }}>
-              <ResponsiveContainer width="100%" height={180}>
+
+            {/* Chart */}
+            <div style={{ flex: 1 }}>
+              <ResponsiveContainer width="100%" height={165}>
                 <AreaChart data={velocityHistory} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
                   <defs>
                     <linearGradient id="velGrad1" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="velGrad2" x1="0" y1="0" x2="0" y2="1">
@@ -420,25 +437,49 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'} vertical={false} />
-                  <XAxis dataKey="sprint" stroke={T.faint} fontSize={8} tickLine={false} fontFamily="monospace" />
+                  <XAxis dataKey="sprintName" stroke={T.faint} fontSize={8} tickLine={false} fontFamily="monospace"
+                    tickFormatter={(v: string) => v?.replace('Sprint ', 'S') || v} />
                   <YAxis stroke={T.faint} fontSize={8} tickLine={false} axisLine={false} fontFamily="monospace" />
                   <Tooltip content={<ChartTip />} />
-                  <Area type="monotone" dataKey="completed" name="Completed" stroke="#6366f1" strokeWidth={2.5}
-                    fill="url(#velGrad1)" isAnimationActive animationDuration={1600} dot={{ fill: '#6366f1', r: 3, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="target" name="Target" stroke="#2dd4bf" strokeWidth={2}
-                    fill="url(#velGrad2)" strokeDasharray="5 3" isAnimationActive animationDuration={1800} dot={false} />
+                  <Area type="monotone" dataKey="completedPoints" name="Completed SP" stroke="#6366f1" strokeWidth={2.5}
+                    fill="url(#velGrad1)" isAnimationActive animationDuration={1600}
+                    dot={{ fill: '#6366f1', r: 3.5, strokeWidth: 0 }} activeDot={{ r: 5, fill: '#6366f1' }} />
+                  <Area type="monotone" dataKey="targetPoints" name="Target SP" stroke="#2dd4bf" strokeWidth={2}
+                    fill="url(#velGrad2)" strokeDasharray="5 3" isAnimationActive animationDuration={1900} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              {[{ c: '#6366f1', l: 'Completed SP' }, { c: '#2dd4bf', l: 'Target SP' }].map(lg => (
-                <div key={lg.l} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ width: '12px', height: '3px', borderRadius: '3px', background: lg.c, display: 'inline-block' }} />
-                  <span style={{ fontSize: '10px', color: T.muted, fontFamily: 'monospace' }}>{lg.l}</span>
-                </div>
-              ))}
+
+            {/* Legend + trend indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {[{ c: '#6366f1', l: 'Completed SP' }, { c: '#2dd4bf', l: 'Target SP' }].map(lg => (
+                  <div key={lg.l} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ width: '12px', height: '3px', borderRadius: '3px', background: lg.c, display: 'inline-block' }} />
+                    <span style={{ fontSize: '10px', color: T.muted, fontFamily: 'monospace' }}>{lg.l}</span>
+                  </div>
+                ))}
+              </div>
+              {velocityHistory.length >= 2 && (() => {
+                const last = velocityHistory[velocityHistory.length - 1]?.completedPoints || 0;
+                const prev = velocityHistory[velocityHistory.length - 2]?.completedPoints || 0;
+                const diff = last - prev;
+                const isUp = diff >= 0;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '8px', background: isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)' }}>
+                    {isUp
+                      ? <TrendingUp style={{ width: '11px', height: '11px', color: '#22c55e' }} />
+                      : <ArrowDownRight style={{ width: '11px', height: '11px', color: '#ef4444' }} />
+                    }
+                    <span style={{ fontSize: '10px', fontWeight: 700, color: isUp ? '#22c55e' : '#ef4444', fontFamily: 'monospace' }}>
+                      {isUp ? '+' : ''}{diff} SP vs last
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
+
         </motion.div>
 
         {/* ─── ROW 3: ISSUE DISTRIBUTION + BURNDOWN + BLOCKERS ─── */}
