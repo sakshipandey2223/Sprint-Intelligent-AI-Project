@@ -160,9 +160,10 @@ function Markdown({ text }: { text: string }) {
 export default function CopilotDrawer() {
   const { isCopilotOpen, toggleCopilot, copilotMessages, addCopilotMessage, clearCopilotHistory } = useAppStore();
   const [inputValue, setInputValue] = useState('');
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const quickQuestions = [
+  const defaultQuestions = [
     'What is blocking Sprint 10?',
     'Which developer is overloaded?',
     'Predict sprint completion.',
@@ -170,6 +171,8 @@ export default function CopilotDrawer() {
     'Why is velocity decreasing?',
     'Generate executive summary.',
   ];
+
+  const quickQuestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : defaultQuestions;
 
   // Auto-scroll to bottom of chat
   const scrollToBottom = () => {
@@ -182,22 +185,35 @@ export default function CopilotDrawer() {
     }
   }, [isCopilotOpen, copilotMessages]);
 
+  // Build Gemini-compatible chat history from messages in state
+  const buildHistory = () => {
+    const msgs = copilotMessages.filter(m => m.text !== copilotMessages[0]?.text); // skip welcome
+    return msgs.map((m: Message) => ({
+      role: m.sender === 'user' ? 'user' as const : 'model' as const,
+      parts: [{ text: m.text }],
+    }));
+  };
+
   // AI API Call Mutation
   const copilotMutation = useMutation({
     mutationFn: async (queryText: string) => {
+      const history = buildHistory();
       const res = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryText }),
+        body: JSON.stringify({ query: queryText, history }),
       });
       if (!res.ok) throw new Error('API failure');
       return res.json();
     },
     onSuccess: (data) => {
       addCopilotMessage('bot', data.answer);
+      if (data.suggestedQuestions?.length > 0) {
+        setDynamicSuggestions(data.suggestedQuestions);
+      }
     },
     onError: () => {
-      addCopilotMessage('bot', `🔴 **System Failure**: I couldn't reach the local AI integration layer. Please verify that your Next.js API server is running and database configuration is valid.`);
+      addCopilotMessage('bot', `🔴 **AI Error**: Failed to reach Gemini. Please check that your API key is valid and try again.`);
     },
   });
 
