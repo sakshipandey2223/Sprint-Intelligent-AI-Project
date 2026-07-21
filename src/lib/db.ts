@@ -41,7 +41,7 @@ async function syncDbToGcs() {
     console.error('Failed to upload DB to GCS:', error);
   }
 }
-let databaseInstance: DatabaseSync | null = null;
+
 
 export function getDB(): DatabaseSync {
   if (databaseInstance) return databaseInstance;
