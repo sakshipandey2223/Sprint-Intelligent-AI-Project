@@ -1,316 +1,427 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, Variants } from 'framer-motion';
-import DashboardLayout from '@/components/dashboard-layout';
+import { motion } from 'framer-motion';
+import { Search, Filter, AlertTriangle, Play, CheckCircle, RotateCcw, ShieldAlert, User, MoreHorizontal, Layout, PieChart as PieChartIcon, Activity } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { useAppStore } from '@/lib/store';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Layers, Flame, Calendar, AlertTriangle, ArrowRight, Check } from 'lucide-react';
 
-const stagger: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.06 } },
-};
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 26 } },
+const THEME_TOKENS = {
+  dark: {
+    bg: '#0f172a',
+    card: 'rgba(30,41,59,0.5)',
+    cardHover: 'rgba(30,41,59,0.8)',
+    text: '#f8fafc',
+    textMuted: '#94a3b8',
+    border: 'rgba(51,65,85,0.5)',
+    borderGlow: 'rgba(99,102,241,0.5)',
+    colBg: 'rgba(15,23,42,0.4)',
+    dropTarget: 'rgba(99,102,241,0.1)',
+  },
+  light: {
+    bg: '#f8fafc',
+    card: '#ffffff',
+    cardHover: '#f1f5f9',
+    text: '#0f172a',
+    textMuted: '#64748b',
+    border: '#e2e8f0',
+    borderGlow: 'rgba(99,102,241,0.5)',
+    colBg: '#f1f5f9',
+    dropTarget: 'rgba(99,102,241,0.05)',
+  }
 };
 
-const colConfig = [
-  { title: 'To Do',      status: 'To Do',      accent: '#475569', glow: 'rgba(71,85,105,0.15)' },
-  { title: 'In Progress', status: 'In Progress', accent: '#6366f1', glow: 'rgba(99,102,241,0.15)' },
-  { title: 'In Review',  status: 'In Review',  accent: '#f59e0b', glow: 'rgba(245,158,11,0.15)' },
-  { title: 'Done',       status: 'Done',       accent: '#10b981', glow: 'rgba(16,185,129,0.15)' },
+const COLUMNS = [
+  { id: 'To Do', label: 'To Do', color: '#94a3b8' },
+  { id: 'In Progress', label: 'In Progress', color: '#3b82f6' },
+  { id: 'In Review', label: 'In Review', color: '#f59e0b' },
+  { id: 'Done', label: 'Done', color: '#10b981' }
 ];
 
-const priorityMap: Record<string, { bg: string; color: string; border: string; lightColor: string }> = {
-  Critical: { bg: 'rgba(244,63,94,0.10)',  color: '#fda4af', border: 'rgba(244,63,94,0.25)', lightColor: '#be123c' },
-  High:     { bg: 'rgba(245,158,11,0.10)', color: '#fcd34d', border: 'rgba(245,158,11,0.25)', lightColor: '#92400e' },
-  Medium:   { bg: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: 'rgba(99,102,241,0.25)',  lightColor: '#3730a3' },
-  Low:      { bg: 'rgba(71,85,105,0.10)',  color: '#94a3b8', border: 'rgba(71,85,105,0.25)',  lightColor: '#475569' },
-};
+export default function SprintBoardPage() {
+  const { activeSprintId, theme } = useAppStore();
+  const queryClient = useQueryClient();
+  const isDark = theme === 'dark';
+  const T = isDark ? THEME_TOKENS.dark : THEME_TOKENS.light;
 
-const typeMap: Record<string, string> = {
-  Bug: '#f43f5e', Blocker: '#f43f5e', Story: '#6366f1', Task: '#94a3b8',
-};
+  const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
-export default function SprintBoard() {
-  const { activeSprintId, filters, setFilter, theme } = useAppStore();
-  const isLight = theme === 'light';
-  const qc = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [epicFilter, setEpicFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-data', activeSprintId],
     queryFn: async () => {
       const res = await fetch(`/api/data?sprintId=${activeSprintId}`);
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) throw new Error('API failure');
       return res.json();
     },
   });
 
   const patchMutation = useMutation({
-    mutationFn: async (upd: any) => {
-      const res = await fetch('/api/issues', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(upd) });
-      if (!res.ok) throw new Error('PATCH failed');
+    mutationFn: async ({ id, status, isBlocked }: { id: string, status?: string, isBlocked?: boolean }) => {
+      const body: any = { id };
+      if (status) body.status = status;
+      if (isBlocked !== undefined) body.isBlocked = isBlocked;
+      const res = await fetch('/api/issues', {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Update failed');
       return res.json();
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dashboard-data', activeSprintId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-data', activeSprintId] });
+    }
   });
 
   if (isLoading || !data) {
-    return (
-      <DashboardLayout>
-        <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-          <div className="spinner" />
-          <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>Loading board…</span>
-        </div>
-      </DashboardLayout>
-    );
+    return <div style={{ padding: '24px', color: T.text }}>Loading sprint board...</div>;
   }
 
-  const { sprints, developers, epics, issues } = data;
-  const S = sprints.find((s: any) => s.id === activeSprintId) || sprints[9];
-
-  const filtered = issues.filter((i: any) => {
-    if (filters.search && !i.title.toLowerCase().includes(filters.search.toLowerCase()) && !i.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    if (filters.epic && i.epicId !== filters.epic) return false;
-    if (filters.assigneeId && i.assigneeId !== filters.assigneeId) return false;
-    if (filters.priority && i.priority.toLowerCase() !== filters.priority.toLowerCase()) return false;
+  const { sprints, issues, developers, epics, velocityHistory } = data;
+  const currentSprint = sprints.find((s: any) => s.id === activeSprintId) || sprints[0];
+  
+  const filteredIssues = issues.filter((issue: any) => {
+    if (search && !issue.title.toLowerCase().includes(search.toLowerCase()) && !issue.id.toLowerCase().includes(search.toLowerCase())) return false;
+    if (epicFilter && issue.epicId !== epicFilter) return false;
+    if (assigneeFilter && issue.assigneeId !== assigneeFilter) return false;
+    if (priorityFilter && issue.priority !== priorityFilter) return false;
     return true;
   });
 
-  const epicPie = epics.map((e: any) => {
-    const pts = filtered.filter((i: any) => i.epicId === e.id).reduce((s: number, i: any) => s + i.storyPoints, 0);
-    return { name: e.name.split(' ').slice(0, 2).join(' '), value: pts, color: e.color };
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedIssueId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    // Small delay to allow the drag image to be captured before we might style it differently
+    setTimeout(() => {
+      if (e.target instanceof HTMLElement) {
+        e.target.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedIssueId(null);
+    setDragOverCol(null);
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '1';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverCol !== colId) {
+      setDragOverCol(colId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, colId: string) => {
+    if (dragOverCol === colId) {
+      setDragOverCol(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, colId: string) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    if (draggedIssueId) {
+      const issue = issues.find((i: any) => i.id === draggedIssueId);
+      if (issue && issue.status !== colId) {
+        patchMutation.mutate({ id: draggedIssueId, status: colId });
+      }
+    }
+    setDraggedIssueId(null);
+  };
+
+  // Stats
+  const totalIssues = issues.length;
+  const blockersCount = issues.filter((i: any) => i.isBlocked).length;
+  
+  // Epic Donut Data
+  const epicData = epics.map((epic: any) => {
+    const epicIssues = issues.filter((i: any) => i.epicId === epic.id);
+    const sp = epicIssues.reduce((acc: number, i: any) => acc + (i.storyPoints || 0), 0);
+    return { name: epic.id, value: sp, color: epic.color };
   }).filter((e: any) => e.value > 0);
 
+  // Workload Data
+  const workloadData = developers.map((dev: any) => {
+    const devIssues = issues.filter((i: any) => i.assigneeId === dev.id);
+    const sp = devIssues.reduce((acc: number, i: any) => acc + (i.storyPoints || 0), 0);
+    return { name: dev.name, sp };
+  }).filter((d: any) => d.sp > 0);
+
   return (
-    <DashboardLayout>
-      <motion.div variants={stagger} initial="hidden" animate="show"
-        style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}
-        className="page-enter"
-      >
-        {/* ── HEADER ─────────────────────────────────── */}
-        <motion.div variants={fadeUp} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      
+      {/* RICH HEADER */}
+      <div style={{ padding: '24px 32px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: isDark ? 'transparent' : '#ffffff' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <h1 style={{ fontSize: '22px', fontWeight: 900, color: isLight ? '#0f172a' : '#f1f5f9', letterSpacing: '-0.02em' }}>Sprint Board</h1>
-              <span className="stat-badge stat-badge-indigo">{S.name}</span>
-              {S.status === 'active' && <span className="stat-badge stat-badge-emerald">● Active</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>{currentSprint.name}</h1>
+              <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '12px', background: currentSprint.status === 'Active' ? 'rgba(34,197,94,0.15)' : 'rgba(148,163,184,0.15)', color: currentSprint.status === 'Active' ? '#22c55e' : T.textMuted, fontWeight: 600 }}>
+                {currentSprint.status}
+              </span>
             </div>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-              <Calendar style={{ width: '11px', height: '11px', display: 'inline', marginRight: '5px' }} />
-              {S.startDate} → {S.endDate} &nbsp;·&nbsp; {S.completedPoints} / {S.targetPoints} SP
-            </p>
+            
+            {/* SP Progress Bar */}
+            <div style={{ width: '400px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: T.textMuted, marginBottom: '6px' }}>
+                <span>{currentSprint.completedPoints} / {currentSprint.targetPoints} SP Completed</span>
+                <span>{Math.round(currentSprint.completionRate * 100)}%</span>
+              </div>
+              <div style={{ width: '100%', height: '6px', background: T.border, borderRadius: '3px', overflow: 'hidden' }}>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.round(currentSprint.completionRate * 100)}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  style={{ height: '100%', background: 'linear-gradient(90deg, #6366f1, #8b5cf6)', borderRadius: '3px' }}
+                />
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {/* Filters */}
-            {['epic', 'assigneeId', 'priority'].map((key) => (
-              <select key={key} value={(filters as any)[key]} onChange={(e) => setFilter(key as any, e.target.value)}
-                className="ctrl" style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
-                <option value="">{key === 'assigneeId' ? 'All Assignees' : key === 'epic' ? 'All Epics' : 'All Priorities'}</option>
-                {key === 'priority' && ['Critical', 'High', 'Medium', 'Low'].map(p => <option key={p} value={p} style={{ background: '#0d1220' }}>{p}</option>)}
-                {key === 'epic' && epics.map((e: any) => <option key={e.id} value={e.id} style={{ background: '#0d1220' }}>{e.name}</option>)}
-                {key === 'assigneeId' && developers.map((d: any) => <option key={d.id} value={d.id} style={{ background: '#0d1220' }}>{d.name}</option>)}
-              </select>
-            ))}
-            {(filters.epic || filters.assigneeId || filters.priority) && (
-              <button onClick={() => { setFilter('epic',''); setFilter('assigneeId',''); setFilter('priority',''); }}
-                style={{ background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)', borderRadius: '8px', color: isLight ? '#be123c' : '#fda4af', fontSize: '11px', fontFamily: 'var(--font-mono)', padding: '8px 14px', cursor: 'pointer', fontWeight: 700 }}>
-                Clear
-              </button>
-            )}
-          </div>
-        </motion.div>
 
-        <hr className="gradient-line" />
-
-        {/* ── BOARD + CHART ────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 220px', gap: '14px', alignItems: 'start' }}>
-
-          {/* Kanban Columns */}
-          {colConfig.map((col) => {
-            const colIssues = filtered.filter((i: any) => i.status === col.status);
-            return (
-              <motion.div key={col.status} variants={fadeUp}
-                className="kanban-col"
-                style={{ borderTop: `3px solid ${col.accent}` }}
-              >
-                {/* Column Header */}
-                <div className="kanban-col-header">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: col.accent, boxShadow: `0 0 8px ${col.accent}88` }} />
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.05em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-                      {col.title}
-                    </span>
-                  </div>
-                  <span style={{
-                    padding: '3px 9px', borderRadius: '99px',
-                    background: `${col.glow}`, border: `1px solid ${col.accent}44`,
-                    fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 800,
-                    color: col.accent,
-                  }}>
-                    {colIssues.length}
-                  </span>
+          {/* Stat Chips */}
+          <div style={{ display: 'flex', gap: '16px' }}>
+            {[
+              { label: 'Total Issues', value: totalIssues, icon: <Layout size={16}/>, color: '#3b82f6' },
+              { label: 'Completed SP', value: currentSprint.completedPoints, icon: <CheckCircle size={16}/>, color: '#10b981' },
+              { label: 'Blockers', value: blockersCount, icon: <ShieldAlert size={16}/>, color: '#ef4444' },
+              { label: 'Team Size', value: developers.length, icon: <User size={16}/>, color: '#8b5cf6' },
+            ].map((stat, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: T.card, border: `1px solid ${T.border}`, borderRadius: '12px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${stat.color}15`, color: stat.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {stat.icon}
                 </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700 }}>{stat.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                {/* Cards */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '4px 8px 8px' }}>
-                  {colIssues.length === 0 ? (
-                    <div style={{
-                      margin: '12px', height: '80px', borderRadius: '10px',
-                      border: '1px dashed rgba(255,255,255,0.07)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'rgba(255,255,255,0.15)', fontSize: '11px', fontFamily: 'var(--font-mono)',
-                    }}>
-                      Empty
-                    </div>
-                  ) : (
-                    colIssues.map((issue: any) => {
-                      const dev = developers.find((d: any) => d.id === issue.assigneeId);
-                      const epic = epics.find((e: any) => e.id === issue.epicId);
-                      const pStyle = priorityMap[issue.priority] || priorityMap.Low;
+        {/* Filter Bar */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ position: 'relative', width: '240px' }}>
+            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: T.textMuted }} />
+            <input 
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search issues..." 
+              style={{ width: '100%', padding: '8px 12px 8px 34px', background: T.card, border: `1px solid ${T.border}`, borderRadius: '8px', color: T.text, fontSize: '13px', outline: 'none' }}
+            />
+          </div>
+          
+          <select value={epicFilter} onChange={e => setEpicFilter(e.target.value)} style={{ padding: '8px 12px', background: T.card, border: `1px solid ${T.border}`, borderRadius: '8px', color: T.text, fontSize: '13px', outline: 'none', appearance: 'none', minWidth: '140px' }}>
+            <option value="">All Epics</option>
+            {epics.map((e: any) => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
 
-                      return (
-                        <div key={issue.id} className={`kanban-card ${issue.isBlocked ? 'kanban-card-blocked' : ''}`}>
-                          {/* Epic accent bar */}
-                          <div style={{ position: 'absolute', bottom: 0, left: '12px', right: '12px', height: '2px', borderRadius: '1px', background: epic?.color || '#475569', opacity: 0.6 }} />
+          <select value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)} style={{ padding: '8px 12px', background: T.card, border: `1px solid ${T.border}`, borderRadius: '8px', color: T.text, fontSize: '13px', outline: 'none', appearance: 'none', minWidth: '140px' }}>
+            <option value="">All Assignees</option>
+            {developers.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
 
-                          {/* Row 1: ID + Priority */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isLight ? '#64748b' : 'rgba(255,255,255,0.30)' }}>
-                              {issue.id}
-                            </span>
-                            <span style={{
-                              padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 700,
-                              fontFamily: 'var(--font-mono)', background: pStyle.bg, color: isLight ? (pStyle as any).lightColor || '#475569' : pStyle.color, border: `1px solid ${pStyle.border}`,
-                            }}>
-                              {issue.priority}
-                            </span>
+          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} style={{ padding: '8px 12px', background: T.card, border: `1px solid ${T.border}`, borderRadius: '8px', color: T.text, fontSize: '13px', outline: 'none', appearance: 'none', minWidth: '140px' }}>
+            <option value="">All Priorities</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+
+          {(search || epicFilter || assigneeFilter || priorityFilter) && (
+            <button 
+              onClick={() => { setSearch(''); setEpicFilter(''); setAssigneeFilter(''); setPriorityFilter(''); }}
+              style={{ padding: '8px 12px', background: 'transparent', border: 'none', color: T.textMuted, fontSize: '13px', cursor: 'pointer' }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* MAIN CONTENT AREA */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 240px', gap: '20px', padding: '24px 32px', flex: 1, overflow: 'hidden' }}>
+        
+        {/* KANBAN COLUMNS */}
+        {COLUMNS.map(col => {
+          const colIssues = filteredIssues.filter((i: any) => i.status === col.id);
+          const isDragOver = dragOverCol === col.id;
+          
+          return (
+            <div 
+              key={col.id}
+              onDragOver={(e) => handleDragOver(e, col.id)}
+              onDragLeave={(e) => handleDragLeave(e, col.id)}
+              onDrop={(e) => handleDrop(e, col.id)}
+              style={{ 
+                display: 'flex', flexDirection: 'column', 
+                background: T.colBg, 
+                borderRadius: '12px', 
+                borderTop: `4px solid ${col.color}`,
+                border: isDragOver ? `1px solid ${T.borderGlow}` : `1px solid ${T.border}`,
+                borderTopWidth: '4px',
+                borderTopColor: col.color,
+                boxShadow: isDragOver ? `0 0 20px ${T.borderGlow}` : 'none',
+                transition: 'all 0.2s ease',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${T.border}` }}>
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>{col.label}</span>
+                <span style={{ fontSize: '12px', background: T.card, padding: '2px 8px', borderRadius: '12px', color: T.textMuted }}>{colIssues.length}</span>
+              </div>
+              
+              <div style={{ padding: '12px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {colIssues.map((issue: any) => {
+                  const epic = epics.find((e: any) => e.id === issue.epicId);
+                  const dev = developers.find((d: any) => d.id === issue.assigneeId);
+                  
+                  return (
+                    <motion.div
+                      layoutId={issue.id}
+                      key={issue.id}
+                      draggable
+                      onDragStart={(e: any) => handleDragStart(e, issue.id)}
+                      onDragEnd={handleDragEnd}
+                      whileHover={{ y: -2, scale: 1.01 }}
+                      style={{
+                        background: T.card,
+                        border: `1px solid ${issue.isBlocked ? '#ef4444' : T.border}`,
+                        borderRadius: '8px',
+                        padding: '16px',
+                        cursor: 'grab',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                      }}
+                    >
+                      {/* Epic Color Bar */}
+                      {epic && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: epic.color }} />}
+                      
+                      {issue.isBlocked && (
+                        <div style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: '10px', padding: '4px 8px', borderRadius: '4px', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                          <AlertTriangle size={12} /> BLOCKED: {issue.blockedReason}
+                        </div>
+                      )}
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '12px', color: T.textMuted, fontFamily: 'monospace' }}>{issue.id}</span>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: issue.priority === 'High' ? 'rgba(239,68,68,0.1)' : 'rgba(148,163,184,0.1)', color: issue.priority === 'High' ? '#ef4444' : T.textMuted }}>{issue.priority}</span>
+                          <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>{issue.type}</span>
+                        </div>
+                      </div>
+                      
+                      <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '16px', lineHeight: 1.4 }}>{issue.title}</div>
+                      
+                      {/* Risk Score */}
+                      <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '10px', color: T.textMuted }}>Risk</span>
+                        <div style={{ flex: 1, height: '4px', background: T.border, borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${issue.riskScore}%`, background: issue.riskScore > 70 ? '#ef4444' : issue.riskScore > 40 ? '#f59e0b' : '#22c55e' }} />
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        {/* Assignee Avatar */}
+                        {dev ? (
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#6366f1', color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600 }} title={dev.name}>
+                            {dev.name.split(' ').map((n: string) => n[0]).join('')}
                           </div>
-
-                          {/* Title */}
-                          <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                            {issue.title}
-                          </p>
-
-                          {/* Blocker Banner */}
-                          {issue.isBlocked && (
-                            <div style={{
-                              display: 'flex', alignItems: 'flex-start', gap: '6px',
-                              padding: '8px 10px', borderRadius: '8px',
-                              background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.20)',
-                              color: isLight ? '#be123c' : '#fda4af', fontSize: '10px', fontFamily: 'var(--font-mono)', lineHeight: 1.4,
-                            }}>
-                              <AlertTriangle style={{ width: '12px', height: '12px', flexShrink: 0, marginTop: '1px' }} />
-                              <span>{issue.blockedReason}</span>
-                            </div>
-                          )}
-
-                          {/* Row: type + SP + dev */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <img src={dev?.avatar} alt="" style={{ width: '20px', height: '20px', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.10)' }} />
-                              <span style={{ fontSize: '10px', color: isLight ? '#64748b' : 'rgba(255,255,255,0.30)', fontWeight: 600 }}>{dev?.name?.split(' ')[0]}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', color: typeMap[issue.type] || '#94a3b8', textTransform: 'uppercase' }}>
-                                {issue.type}
-                              </span>
-                              <span style={{
-                                padding: '2px 7px', borderRadius: '5px', fontSize: '10px', fontWeight: 800,
-                                fontFamily: 'var(--font-mono)', background: 'rgba(99,102,241,0.10)',
-                                border: '1px solid rgba(99,102,241,0.20)', color: isLight ? '#3730a3' : '#a5b4fc',
-                              }}>
-                                {issue.storyPoints}
-                              </span>
-                            </div>
+                        ) : (
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: T.border, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <User size={12} color={T.textMuted} />
                           </div>
-
-                          {/* Action Row (hover revealed via CSS group) */}
-                          <div className="card-actions" style={{
-                            display: 'flex', alignItems: 'center', gap: '6px',
-                            borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px',
-                          }}>
-                            {issue.status === 'In Progress' && (
-                              <button onClick={(e) => { e.stopPropagation(); const r = issue.isBlocked ? null : (prompt('Enter blocker reason:') || 'Waiting on dependency'); patchMutation.mutate({ id: issue.id, isBlocked: !issue.isBlocked, blockedReason: r }); }}
-                                style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer', border: '1px solid', transition: 'all 0.15s ease', background: issue.isBlocked ? 'rgba(16,185,129,0.12)' : 'rgba(244,63,94,0.12)', color: issue.isBlocked ? '#6ee7b7' : '#fda4af', borderColor: issue.isBlocked ? 'rgba(16,185,129,0.25)' : 'rgba(244,63,94,0.25)' }}>
-                                {issue.isBlocked ? '✓ Resolve' : '⚠ Block'}
-                              </button>
-                            )}
-                            <div style={{ marginLeft: 'auto' }}>
-                              {issue.status === 'To Do' && (
-                                <button onClick={(e) => { e.stopPropagation(); patchMutation.mutate({ id: issue.id, status: 'In Progress' }); }}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', color: '#a5b4fc' }}>
-                                  Start <ArrowRight style={{ width: '10px', height: '10px' }} />
-                                </button>
-                              )}
-                              {issue.status === 'In Progress' && (
-                                <button onClick={(e) => { e.stopPropagation(); patchMutation.mutate({ id: issue.id, status: 'In Review' }); }}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fcd34d' }}>
-                                  Review <ArrowRight style={{ width: '10px', height: '10px' }} />
-                                </button>
-                              )}
-                              {issue.status === 'In Review' && (
-                                <button onClick={(e) => { e.stopPropagation(); patchMutation.mutate({ id: issue.id, status: 'Done' }); }}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '6px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: '#6ee7b7' }}>
-                                  Approve <Check style={{ width: '10px', height: '10px' }} />
-                                </button>
-                              )}
-                              {issue.status === 'Done' && (
-                                <button onClick={(e) => { e.stopPropagation(); patchMutation.mutate({ id: issue.id, status: 'To Do' }); }}
-                                  style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '9px', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer', background: 'rgba(71,85,105,0.12)', border: '1px solid rgba(71,85,105,0.25)', color: '#94a3b8' }}>
-                                  Reopen
-                                </button>
-                              )}
-                            </div>
+                        )}
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {/* Story Points */}
+                          <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: T.border, fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, color: T.textMuted }} title="Story Points">
+                            {issue.storyPoints}
+                          </div>
+                          
+                          {/* Actions */}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {issue.status === 'To Do' && <button onClick={() => patchMutation.mutate({ id: issue.id, status: 'In Progress' })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: T.textMuted }} title="Start"><Play size={14} /></button>}
+                            {issue.status === 'In Progress' && <button onClick={() => patchMutation.mutate({ id: issue.id, status: 'In Review' })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: T.textMuted }} title="Review"><Layout size={14} /></button>}
+                            {issue.status === 'In Review' && <button onClick={() => patchMutation.mutate({ id: issue.id, status: 'Done' })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#10b981' }} title="Approve"><CheckCircle size={14} /></button>}
+                            {issue.status === 'Done' && <button onClick={() => patchMutation.mutate({ id: issue.id, status: 'To Do' })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: T.textMuted }} title="Reopen"><RotateCcw size={14} /></button>}
+                            
+                            <button onClick={() => patchMutation.mutate({ id: issue.id, isBlocked: !issue.isBlocked })} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: issue.isBlocked ? '#ef4444' : T.textMuted }} title={issue.isBlocked ? "Unblock" : "Block"}>
+                              <ShieldAlert size={14} />
+                            </button>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {/* Epic Pie Chart Column */}
-          <motion.div variants={fadeUp} className="panel-static" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <Layers style={{ width: '13px', height: '13px', color: '#a5b4fc' }} />
-                Epic SP Split
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
-              <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>Story points by area</div>
             </div>
+          );
+        })}
 
-            <div style={{ height: '160px' }}>
+        {/* STICKY SIDEBAR */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', paddingRight: '4px' }}>
+          
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: '12px', padding: '16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <PieChartIcon size={16} /> Epic Distribution (SP)
+            </div>
+            <div style={{ height: '140px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={epicPie} cx="50%" cy="50%" innerRadius={45} outerRadius={68} paddingAngle={3} dataKey="value"
-                    isAnimationActive animationDuration={1400} animationEasing="ease-out">
-                    {epicPie.map((e: any, i: number) => <Cell key={i} fill={e.color} />)}
+                  <Pie data={epicData} innerRadius={40} outerRadius={60} paddingAngle={2} dataKey="value">
+                    {epicData.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: 'rgba(13,18,32,0.97)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '8px', fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#f1f5f9' }} />
+                  <Tooltip contentStyle={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: '8px', fontSize: '12px' }} itemStyle={{ color: T.text }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {epicPie.map((e: any, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: e.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</span>
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: '12px', padding: '16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <User size={16} /> Team Workload
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {workloadData.map((w: any) => (
+                <div key={w.name}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
+                    <span>{w.name}</span>
+                    <span style={{ fontWeight: 600 }}>{w.sp} SP</span>
                   </div>
-                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isLight ? '#0f172a' : '#f1f5f9', flexShrink: 0, marginLeft: '6px' }}>{e.value}</span>
+                  <div style={{ height: '6px', background: T.border, borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(w.sp / 20 * 100, 100)}%`, background: w.sp > 15 ? '#ef4444' : '#6366f1' }} />
+                  </div>
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
+
+          <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: '12px', padding: '16px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={16} /> Sprint Velocity
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 700, color: '#10b981', marginBottom: '4px' }}>
+              {currentSprint.velocity}
+            </div>
+            <div style={{ fontSize: '11px', color: T.textMuted }}>Avg SP / Sprint</div>
+          </div>
+
         </div>
-      </motion.div>
-    </DashboardLayout>
+      </div>
+    </div>
   );
 }

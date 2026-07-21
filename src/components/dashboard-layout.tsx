@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Navigation from './navigation';
 import CopilotDrawer from './copilot-drawer';
 import { useAppStore } from '@/lib/store';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Bell, ChevronDown, Cpu, RefreshCw, Palette, Sun, Moon, Bot } from 'lucide-react';
+import { Search, Bell, ChevronDown, Cpu, RefreshCw, Palette, Sun, Moon, Bot, ShieldAlert, TrendingUp, Zap, Users } from 'lucide-react';
 
 /* ── Theme color token maps ───────────────────────────────────────── */
 const themeColors = {
@@ -147,6 +148,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const isLight = theme === 'light';
 
+  const [showNotif, setShowNotif] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  const NOTIFS = [
+    { id: 1, color: '#ef4444', title: 'New Blocker Detected', desc: '3 issues blocking Sprint 10', time: '2m ago', unread: true, icon: <ShieldAlert size={14}/> },
+    { id: 2, color: '#22c55e', title: 'Velocity Milestone', desc: 'Team exceeded 120 SP this sprint!', time: '18m ago', unread: true, icon: <TrendingUp size={14}/> },
+    { id: 3, color: '#6366f1', title: 'AI Risk Alert', desc: 'Sprint completion probability at 34%', time: '1h ago', unread: true, icon: <Zap size={14}/> },
+    { id: 4, color: '#f59e0b', title: 'Deploy Success', desc: 'v2.4.1 shipped to production', time: '2h ago', unread: false, icon: <Cpu size={14}/> },
+    { id: 5, color: '#2dd4bf', title: 'Team Update', desc: 'Alex Chen completed 5 tasks', time: '3h ago', unread: false, icon: <Users size={14}/> },
+  ];
+  const unreadCount = NOTIFS.filter(n => n.unread).length;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotif(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   useEffect(() => {
     if (isLight) {
       document.documentElement.classList.add('light');
@@ -165,6 +185,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return res.json();
     },
   });
+
+  const handleRefresh = () => { refetch(); setIsRefreshing(true); setTimeout(() => setIsRefreshing(false), 1500); };
 
   return (
     <div className="dashboard-wrapper" style={{
@@ -320,35 +342,79 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
 
             {/* Refresh */}
-            <button
-              onClick={() => refetch()}
-              style={{
-                width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer',
-                background: 'rgba(30,41,59,0.50)', border: '1px solid var(--color-border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#475569', transition: 'all 200ms ease',
-              }}
-            >
-              <RefreshCw style={{ width: '13px', height: '13px' }} />
+            <button onClick={handleRefresh} title="Refresh Data" style={{ width:'32px', height:'32px', borderRadius:'8px', cursor:'pointer', background: isRefreshing ? 'rgba(34,197,94,0.12)' : 'rgba(30,41,59,0.50)', border:`1px solid ${isRefreshing ? 'rgba(34,197,94,0.3)' : 'var(--color-border)'}`, display:'flex', alignItems:'center', justifyContent:'center', color: isRefreshing ? '#22c55e' : '#475569', transition:'all 200ms ease' }}>
+              <RefreshCw style={{ width:'13px', height:'13px', transition: 'transform 0.3s', transform: isRefreshing ? 'rotate(360deg)' : 'rotate(0deg)' }} />
             </button>
 
-            {/* Bell */}
-            <button style={{
-              width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer',
-              background: 'rgba(30,41,59,0.50)', border: '1px solid var(--color-border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#475569', transition: 'all 200ms ease',
-              position: 'relative',
-            }}>
-              <Bell style={{ width: '13px', height: '13px' }} />
-              <span style={{
-                position: 'absolute', top: '6px', right: '6px',
-                width: '6px', height: '6px', borderRadius: '50%',
-                background: 'var(--color-accent)',
-                border: '1.5px solid var(--color-background)',
-                boxShadow: '0 0 6px var(--color-glow)',
-              }} />
-            </button>
+            {/* Bell & Notifications */}
+            <div ref={notifRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowNotif(v => !v)}
+                style={{
+                  width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer',
+                  background: showNotif ? 'rgba(79,70,229,0.15)' : 'rgba(30,41,59,0.50)',
+                  border: `1px solid ${showNotif ? 'rgba(79,70,229,0.3)' : 'var(--color-border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: showNotif ? '#6366f1' : '#475569', transition: 'all 200ms ease',
+                  position: 'relative',
+                }}
+              >
+                <Bell style={{ width: '13px', height: '13px' }} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '6px', right: '6px',
+                    width: '6px', height: '6px', borderRadius: '50%',
+                    background: 'var(--color-accent)',
+                    border: '1.5px solid var(--color-background)',
+                    boxShadow: '0 0 6px var(--color-glow)',
+                  }} />
+                )}
+              </button>
+
+              <AnimatePresence>
+                {showNotif && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      position: 'absolute', top: '44px', right: 0, width: '300px', zIndex: 100,
+                      background: isLight ? '#ffffff' : '#0f172a',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '12px',
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-foreground)' }}>Notifications</span>
+                        <span style={{ fontSize: '10px', background: 'var(--color-primary)', color: 'var(--color-text-accent)', padding: '2px 6px', borderRadius: '10px' }}>{unreadCount} New</span>
+                      </div>
+                      <button style={{ fontSize: '11px', color: '#64748b', background: 'transparent', border: 'none', cursor: 'pointer' }}>Mark all</button>
+                    </div>
+                    <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                      {NOTIFS.map(n => (
+                        <div key={n.id} style={{ display: 'flex', gap: '12px', padding: '12px 16px', borderBottom: '1px solid var(--color-border)', background: n.unread ? (isLight ? 'rgba(99,102,241,0.03)' : 'rgba(99,102,241,0.05)') : 'transparent', position: 'relative', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background = isLight ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.02)'} onMouseLeave={e => e.currentTarget.style.background = n.unread ? (isLight ? 'rgba(99,102,241,0.03)' : 'rgba(99,102,241,0.05)') : 'transparent'}>
+                          {n.unread && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: n.color }} />}
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: `${n.color}15`, color: n.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {n.icon}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <span style={{ fontSize: '12px', fontWeight: n.unread ? 600 : 500, color: 'var(--color-foreground)' }}>{n.title}</span>
+                              <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#64748b' }}>{n.time}</span>
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>{n.desc}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
           </div>
         </header>
