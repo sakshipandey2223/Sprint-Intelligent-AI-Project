@@ -286,12 +286,14 @@ export default function SprintBoardPage() {
                   const dev = developers.find((d: any) => d.id === issue.assigneeId);
                   
                   return (
-                    <motion.div
-                      layoutId={issue.id}
+                    <div
                       key={issue.id}
                       draggable
-                      onDragStart={(e: any) => handleDragStart(e, issue.id)}
+                      onDragStart={(e) => handleDragStart(e, issue.id)}
                       onDragEnd={handleDragEnd}
+                    >
+                    <motion.div
+                      layoutId={issue.id}
                       whileHover={{ y: -2, scale: 1.01 }}
                       style={{
                         background: T.card,
@@ -363,6 +365,7 @@ export default function SprintBoardPage() {
                         </div>
                       </div>
                     </motion.div>
+                    </div>
                   );
                 })}
               </div>
