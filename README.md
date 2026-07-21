@@ -16,7 +16,7 @@
 
 <br/>
 
-**Check my app link:** [https://sprint-kpi-dashboard-czaxdkc4fecgh9an.centralindia-01.azurewebsites.net](https://sprint-kpi-dashboard-czaxdkc4fecgh9an.centralindia-01.azurewebsites.net)
+**Check my app link:** [https://sprint-dashboard-219848749817.us-central1.run.app/](https://sprint-dashboard-219848749817.us-central1.run.app/)
 
 <br/>
 

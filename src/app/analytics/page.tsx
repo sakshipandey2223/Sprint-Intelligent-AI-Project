@@ -20,12 +20,12 @@ const COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'
 const containerVariants = {
   hidden: { opacity: 0 },
   show: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.05 } },
-};
+} as const;
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 260, damping: 24 } },
-};
+} as const;
 
 export default function AnalyticsDeepDive() {
   const { activeSprintId } = useAppStore();
