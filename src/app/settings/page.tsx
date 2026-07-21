@@ -297,7 +297,7 @@ export default function SettingsPage() {
                     return (
                       <motion.div key={m.id} whileHover={{ y: -3 }} onClick={() => setSelectedModel(m.id)}
                         style={{ padding: '20px', borderRadius: '18px', border: `2px solid ${isSelected ? m.color : 'var(--color-card-border)'}`, background: isSelected ? `${m.color}18` : 'var(--color-card-ambient)', cursor: 'pointer', transition: 'all 0.25s', boxShadow: isSelected ? `0 0 30px ${m.color}30` : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyBetween: 'space-between', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
                           <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${m.color}20`, border: `1px solid ${m.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Icon style={{ width: '20px', color: m.color }} />
                           </div>
