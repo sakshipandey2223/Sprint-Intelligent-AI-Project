@@ -181,12 +181,12 @@ export default function Home() {
               </div>
               <div>
                 <div className="brand-name">Sprint Intelligent KPI Tracking</div>
-                <div className="brand-tag">GCP CLOUD ENGINE</div>
+                <div className="brand-tag">ENTERPRISE SaaS v2.4</div>
               </div>
             </div>
             <div className="status-pill">
               <span className="status-dot"></span>
-              GCS PERSISTENT
+              ZERO-TRUST LINK
             </div>
           </div>
 
@@ -196,30 +196,30 @@ export default function Home() {
                 Data-driven <span className="accent">intelligence</span> for modern engineering.
               </div>
               <p className="sub">
-                Real-time velocity tracking, automated risk radar, and Gemini 2.0 Flash / LLaMA 3.3 AI Copilot integration.
+                Real-time velocity tracking, automated risk radar, developer capacity analytics, and intelligent copilot assistance.
               </p>
             </div>
 
             <div className="term">
-              {terminalRows >= 1 && <div className="term-row"><span className="tag">[gcp]</span> cloud storage mounted<span className="ok">... active</span></div>}
-              {terminalRows >= 2 && <div className="term-row"><span className="tag">[db]</span> sqlite synced with GCS<span className="ok"> ✓ ready</span></div>}
-              {terminalRows >= 3 && <div className="term-row"><span className="tag">[ai]</span> groq & gemini engines<span className="ok"> ✓ online</span></div>}
-              {terminalRows >= 4 && <div className="term-row"><span className="tag">[auth]</span> awaiting user sign-in<span className="caret"></span></div>}
+              {terminalRows >= 1 && <div className="term-row"><span className="tag">[boot]</span> initializing telemetry stream<span className="ok">... done</span></div>}
+              {terminalRows >= 2 && <div className="term-row"><span className="tag">[auth]</span> zero-trust token handshakes<span className="ok"> ✓ verified</span></div>}
+              {terminalRows >= 3 && <div className="term-row"><span className="tag">[neural]</span> kpi analytics engine<span className="ok"> ✓ online</span></div>}
+              {terminalRows >= 4 && <div className="term-row"><span className="tag">[status]</span> 256-bit AES encryption<span className="caret"></span></div>}
             </div>
           </div>
 
           <div className="stage-foot">
             <div>
-              <div className="metric-label">CLOUD ENGINE</div>
-              <div className="metric-value teal">GCP Cloud Run</div>
+              <div className="metric-label">SECURITY</div>
+              <div className="metric-value teal">ISO-27001 SOC2</div>
             </div>
             <div>
-              <div className="metric-label">AI COPILOT</div>
-              <div className="metric-value">Groq + Gemini</div>
+              <div className="metric-label">LATENCY</div>
+              <div className="metric-value">&lt; 12ms Global</div>
             </div>
             <div>
-              <div className="metric-label">DATA VAULT</div>
-              <div className="metric-value">GCS Storage</div>
+              <div className="metric-label">ENCRYPTION</div>
+              <div className="metric-value">AES-256-GCM</div>
             </div>
           </div>
         </section>
@@ -353,15 +353,15 @@ export default function Home() {
           <div className="trust-strip">
             <div className="trust-item">
               <Shield style={{ width: '12px', height: '12px' }} />
-              GCP CLOUD SECURE
+              ENTERPRISE GRADE
             </div>
             <div className="trust-item">
               <Lock style={{ width: '12px', height: '12px' }} />
-              GCS VAULT PERSISTENT
+              AES-256 ENCRYPTED
             </div>
             <div className="trust-item">
               <Sparkles style={{ width: '12px', height: '12px' }} />
-              AI COPILOT READY
+              SOC2 TYPE II AUDITED
             </div>
           </div>
         </section>
