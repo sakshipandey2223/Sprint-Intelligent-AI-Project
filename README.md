@@ -23,213 +23,251 @@
 ---
 
 ## Table of Contents
-1. [DevOps & CI/CD Architecture (NEW)](#-devops--cicd-architecture-new)
+1. [DevOps & CI/CD Architecture](#-devops--cicd-architecture)
 2. [System Architecture (HLD)](#-system-architecture-hld)
-3. [Component Specification & Data Flow (HLD)](#-component-specification--data-flow-hld)
-4. [Low-Level Design (LLD)](#-low-level-design-lld)
-5. [Getting Started](#-getting-started)
+3. [Low-Level Design (LLD) & Database Persistence](#-low-level-design-lld--database-persistence)
+4. [Functional Specifications & Client Flow](#-functional-specifications--client-flow)
+5. [Security & Role-Based Access Control](#-security--role-based-access-control)
+6. [Getting Started & Local Execution](#-getting-started--local-execution)
 
 ---
 
-## DevOps & CI/CD Architecture (NEW)
+## DevOps & CI/CD Architecture
 
-This project features a **fully automated, Zero-Downtime Deployment Pipeline** built on GitHub Actions and Microsoft Azure App Service.
+Our deployment pipeline utilizes **Google Cloud Build** for continuous integration and deploys directly to **Google Cloud Run** in the `us-central1` region. The database is persistent across serverless containers using an automated sync engine with **Google Cloud Storage (GCS)**.
 
-### Automation Workflow
-Every `git push` to the `main` branch automatically triggers the CI/CD pipeline which builds a highly-optimized standalone Next.js artifact and securely pushes it to Azure.
+### Pipeline Workflow Diagram
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Developer
-    participant GitHub as GitHub Repository (main)
-    participant Actions as GitHub Actions (CI)
-    participant Artifact as CI Artifacts
-    participant Azure as Azure App Service (Prod)
+graph TD
+    %% Define Styles
+    classDef git fill:#111924,stroke:#f05032,stroke-width:2px,color:#fff;
+    classDef gcb fill:#111924,stroke:#4285f4,stroke-width:2px,color:#fff;
+    classDef gcr fill:#111924,stroke:#34a853,stroke-width:2px,color:#fff;
+    classDef gcs fill:#111924,stroke:#fbec5d,stroke-width:2px,color:#d1d5db;
+    
+    %% Elements
+    Push["Developer: git push main"]:::git
+    GitHub["GitHub Repository Trigger"]:::git
+    GCB["Google Cloud Build Pipeline"]:::gcb
+    GAR["Artifact Registry (Docker Image)"]:::gcb
+    CloudRun["Google Cloud Run (Serverless App)"]:::gcr
+    GCS["GCS Bucket (sprint_intelligence.db)"]:::gcs
+    LocalTmp["Cloud Run Container /tmp (Local SQLite)"]:::gcr
 
-    Developer->>GitHub: git push origin main
-    Note over GitHub, Actions: Push Event Trigger
-    GitHub->>Actions: Trigger .github/workflows/deploy.yml
-    
-    rect rgb(30, 41, 59)
-    Note over Actions: CI Build Phase
-    Actions->>Actions: Install Node.js 22.x
-    Actions->>Actions: npm ci & npm run build
-    Actions->>Actions: Configure Next.js Standalone Mode
-    end
-    
-    Actions->>Artifact: Upload node-app build artifact
-    
-    rect rgb(15, 23, 42)
-    Note over Actions, Azure: CD Deployment Phase
-    Actions->>Artifact: Download artifact
-    Actions->>Azure: Authenticate via AZURE_WEBAPP_PUBLISH_PROFILE
-    Actions->>Azure: Zip Push Deploy (Zero-Downtime)
-    Azure-->>Actions: Success (200 OK)
-    end
-    
-    Azure-->>Developer: Application Live!
+    %% Flow
+    Push --> GitHub
+    GitHub -->|Webhook Trigger| GCB
+    GCB -->|1. Build Multi-stage Docker Image| GAR
+    GCB -->|2. Deploy Container| CloudRun
+    CloudRun -->|3. On-Request Sync Read| GCS
+    GCS -->|Download db| LocalTmp
+    LocalTmp -->|4. On-Write Sync Upload| GCS
 ```
 
-### Key DevOps Features:
-- **Standalone Build Optimization**: Reduces the container image footprint by 80% by only deploying required production traces.
-- **Node 22 LTS Support**: Fully supports native `node:sqlite` execution in the cloud.
-- **Secure Secret Management**: All Azure Publish Profiles are securely encrypted inside GitHub Repository Secrets.
+### Architectural Details:
+* **Multi-Stage Docker Containerization**: The app is built on a lightweight `node:22-alpine` environment. The output bundle uses Next.js standalone optimization, stripping away devDependencies and cutting down container size by over 80%.
+* **Dual-State Database Synchronization**: Since serverless container instances on Cloud Run are ephemeral, the SQLite database `sprint_intelligence.db` resides in the container's fast `/tmp` memory block. To ensure changes persist, the server queries/downloads the file from Google Cloud Storage (`gs://sakshiaiproject-sprint-data/sprint_intelligence.db`) on startup or incoming read requests, and streams modifications back to GCS on write actions.
+* **Auto-Scaling configuration**: Configured with a single-instance throttle (`--max-instances 1`) to eliminate database write conflicts and race conditions.
 
 ---
 
 ## System Architecture (HLD)
 
-The project follows a modern **Server-less / Micro-monolith hybrid architecture** powered by Next.js 16. It leverages Next.js App Router for server-rendered page layouts, React-Query for robust client-side state caching, and native Node.js SQLite (`node:sqlite`) for data persistence.
+The codebase implements a robust, high-performance hybrid model using a serverless router core. 
 
 ```mermaid
-graph TD
-    classDef client fill:#0f172a,stroke:#6366f1,stroke-width:2px,color:#fff;
-    classDef server fill:#0f172a,stroke:#22c55e,stroke-width:2px,color:#fff;
-    classDef database fill:#0f172a,stroke:#eab308,stroke-width:2px,color:#fff;
+graph LR
+    %% Styles
+    classDef ui fill:#111924,stroke:#6366f1,stroke-width:2px,color:#f1f5f9;
+    classDef api fill:#111924,stroke:#2dd4a7,stroke-width:2px,color:#f1f5f9;
+    classDef persist fill:#111924,stroke:#f59e0b,stroke-width:2px,color:#f1f5f9;
 
-    subgraph ClientLayer["Client Layer (React / UI UX Pro Max)"]
-        DashboardView["Executive Dashboard Component"]:::client
-        BoardView["Interactive Kanban Board"]:::client
-        ExplorerView["Issue Explorer & Drawer"]:::client
-        CopilotDrawer["AI Copilot Drawer Component"]:::client
-        ZustandStore["Global Zustand Store (Filters, Scope)"]:::client
+    subgraph Client ["Client Interface (Next.js SPA)"]
+        UI["Bento-Grid Panels & Graphs (Recharts)"]:::ui
+        Zustand["Zustand Store (Theme / Filters)"]:::ui
+        TanStack["TanStack Query (Cache Invalidation)"]:::ui
     end
 
-    subgraph BackendAPI["Next.js Route Handlers (Server)"]
-        GetDataAPI["GET /api/data"]:::server
-        PatchIssuesAPI["PATCH /api/issues"]:::server
-        CopilotAPI["POST /api/copilot (Streaming Router)"]:::server
-        AIEngine["AI Risk & Report Generator"]:::server
+    subgraph Backend ["Serverless API Route Handlers"]
+        Router["Next.js App Router (Node.js 22)"]:::api
+        AuthHandler["Auth Handler (Role-based: admin/user)"]:::api
+        AIService["AI Insights & Reports Engine"]:::api
     end
 
-    subgraph Persistence["Storage & Engine Layer"]
-        SQLiteDB["sprint_intelligence.db (node:sqlite)"]:::database
+    subgraph Storage ["Persistent Telemetry Storage"]
+        LocalSQLite["Local /tmp/sprint_intelligence.db"]:::persist
+        GCS_Bucket["GCS Bucket Storage (sprint_intelligence.db)"]:::persist
     end
 
-    %% Client to API
-    DashboardView -->|Fetch Analytics| GetDataAPI
-    BoardView -->|Update Task Status| PatchIssuesAPI
-    ExplorerView -->|Load Detailed Ticket| GetDataAPI
-    CopilotDrawer -->|Prompt Copilot / Stream Output| CopilotAPI
-    
-    %% API to Database / Engine
-    GetDataAPI -->|Read Telemetry| SQLiteDB
-    PatchIssuesAPI -->|Write State & Blockers| SQLiteDB
-    CopilotAPI -->|Generate Summary| AIEngine
-    AIEngine -->|Retrieve DB Context| SQLiteDB
+    %% Connections
+    UI -->|1. Triggers Query| TanStack
+    TanStack -->|2. Fetch API Requests| Router
+    Router -->|3. Validate User Session| AuthHandler
+    Router -->|4. Read/Write Data| LocalSQLite
+    Router -->|5. Compute Prompts| AIService
+    LocalSQLite <-->|Bi-directional GCS sync| GCS_Bucket
 ```
 
----
-
-## Component Specification & Data Flow (HLD)
-
-### 1. Unified State Flow
-The user interacts with the sidebar navigation, filters, or active sprint selector. When these options change:
-1. **Zustand** stores the active `activeSprintId` and global filters (search query, priority, assignee, epic).
-2. **React Query (TanStack Query)** automatically detects the query-key changes and issues a background HTTP GET fetch request to `/api/data?sprintId=N`.
-3. The server queries the SQLite database, computes the real-time burndown, Epic allocation, and developer capacity ratings, and returns a JSON payload.
-4. UI components (Bento cards, Recharts plots, gauges) animate using Framer Motion to reflect the new state.
+### Component Details:
+1. **Client Interface**: Interactive telemetry display containing fully animated SVG components, Recharts visualizations, and Framer Motion layouts. Responsive adjustments make the dashboards optimized for mobile, tablet, and 4K TV screens.
+2. **TanStack Query & Zustand Cache**: Zustand handles state filters (active sprint selection, search tags, assignees) and dynamically invalidates TanStack Query keys, initiating fresh HTTP requests to `/api/data` serverlessly.
+3. **AI Reasoning Layer**: Connects SQLite state metrics directly to prompts using deep analytics engines. Compiles Sprint Retrospectives, capacity risk scores, blocker telemetry, and generates customized PDF/Word compilations on demand.
 
 ---
 
-## Low-Level Design (LLD)
+## Low-Level Design (LLD) & Database Persistence
 
-### Database Schema
+Persistence is built on native Node.js SQLite (`node:sqlite`). Seeding runs automatically upon startup if GCS is empty.
 
-We use a local SQLite database file `sprint_intelligence.db` which is automatically created, migrated, and seeded with mock telemetry on system launch if it does not exist.
+### Relational Schema Specification
 
-#### 1. `sprints` Table
-Stores high-level metadata representing the delivery period.
+#### 1. `sprints`
+Tracks sprint-specific velocity metrics, dates, and execution states.
 ```sql
 CREATE TABLE IF NOT EXISTS sprints (
   id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL,
-  status TEXT NOT NULL,
-  start_date TEXT NOT NULL,
-  end_date TEXT NOT NULL,
-  target_points INTEGER NOT NULL,
-  completed_points INTEGER NOT NULL,
-  health_score INTEGER NOT NULL,
-  completion_rate INTEGER NOT NULL
+  name TEXT,
+  status TEXT,
+  startDate TEXT,
+  endDate TEXT,
+  targetPoints INTEGER,
+  completedPoints INTEGER,
+  velocity INTEGER,
+  completionRate INTEGER,
+  healthScore INTEGER
 );
 ```
 
-#### 2. `developers` Table
-Tracks individual team resources, roles, avatars, capacity, and active status.
+#### 2. `developers`
+Contains developer profile capacity metadata, assignment details, and defect metrics.
 ```sql
 CREATE TABLE IF NOT EXISTS developers (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL,
-  avatar TEXT NOT NULL,
-  capacity INTEGER NOT NULL,
-  utilization INTEGER NOT NULL,
-  skills TEXT NOT NULL -- Comma-separated list
+  name TEXT,
+  role TEXT,
+  avatar TEXT,
+  capacityPoints INTEGER,
+  assignedPoints INTEGER,
+  utilization INTEGER,
+  defectDensity REAL,
+  completedIssuesCount INTEGER,
+  activeIssuesCount INTEGER,
+  skills TEXT
 );
 ```
 
-#### 3. `epics` Table
-Keeps record of epic objectives, visual theme styling, and completed points.
+#### 3. `epics`
+Groups delivery objectives, tracking overall milestone progression.
 ```sql
 CREATE TABLE IF NOT EXISTS epics (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  color TEXT NOT NULL,
-  total_points INTEGER NOT NULL,
-  completed_points INTEGER NOT NULL,
-  progress INTEGER NOT NULL
+  name TEXT,
+  color TEXT,
+  progress INTEGER,
+  totalPoints INTEGER,
+  completedPoints INTEGER
 );
 ```
 
-#### 4. `issues` Table
-The core ticket unit. Connects assignees and epics, and stores blocking impediments and AI Risk analytics.
+#### 4. `issues`
+The central transaction table holding story details, assigned links, and AI risk details.
 ```sql
 CREATE TABLE IF NOT EXISTS issues (
   id TEXT PRIMARY KEY,
-  sprint_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  status TEXT NOT NULL,
-  priority TEXT NOT NULL,
-  type TEXT NOT NULL,
-  story_points INTEGER NOT NULL,
-  assignee_id TEXT,
-  epic_id TEXT,
-  risk_score INTEGER DEFAULT 0,
-  is_blocked INTEGER DEFAULT 0,
-  blocked_reason TEXT,
-  created_date TEXT,
-  resolved_date TEXT,
-  risk_factors TEXT, -- Comma-separated factors
-  FOREIGN KEY(sprint_id) REFERENCES sprints(id),
-  FOREIGN KEY(assignee_id) REFERENCES developers(id),
-  FOREIGN KEY(epic_id) REFERENCES epics(id)
+  title TEXT,
+  type TEXT,
+  status TEXT,
+  priority TEXT,
+  storyPoints INTEGER,
+  assigneeId TEXT,
+  sprintId INTEGER,
+  epicId TEXT,
+  createdDate TEXT,
+  resolvedDate TEXT,
+  isBlocked INTEGER,
+  blockedReason TEXT,
+  riskScore INTEGER,
+  riskFactors TEXT,
+  FOREIGN KEY(sprintId) REFERENCES sprints(id),
+  FOREIGN KEY(assigneeId) REFERENCES developers(id),
+  FOREIGN KEY(epicId) REFERENCES epics(id)
+);
+```
+
+#### 5. `users`
+Saves user logins, hashed passphrases, and access permissions.
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE,
+  password TEXT,
+  name TEXT,
+  role TEXT,
+  createdAt TEXT
 );
 ```
 
 ---
 
-## Getting Started
+## Functional Specifications & Client Flow
 
-### Installation
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Client UI
+    participant Store as Zustand Store
+    participant Query as TanStack Query
+    participant API as Next.js API Route
+    participant DB as SQLite + GCS Sync
 
-1. Clone the repository:
+    User->>Store: 1. Changes Global Sprint/Filter Selection
+    Store->>Query: 2. Invalidate Cached Query Key
+    Query->>API: 3. HTTP GET Request /api/data?sprintId=X
+    API->>DB: 4. Download latest DB from GCS to container /tmp
+    DB-->>API: 5. Execute SQLite queries on telemetry
+    API-->>Query: 6. Return computed JSON analytics data
+    Query-->>User: 7. Animate charts, graphs, and KPI gauges
+```
+
+---
+
+## Security & Role-Based Access Control
+
+The app implements a comprehensive security module directly inside the dashboard:
+* **Zero-Trust Login Framework**: Secure authentication portal with a dynamic particle network system, animated toggle theme buttons, and customizable passphrase input validators.
+* **Role Validation System**: 
+  - **`Admin`**: Exclusive credentials (default: username `admin`, password `admin`). Grants permissions to access LLM parameters, sensitivity variables, and user roles manager dashboard.
+  - **`User`**: Regular credentials. Accesses all telemetry, interactive boards, and analytics reports, but blocks settings panel configuration.
+* **Dynamic User Management Panel**: Accessible to admins to elevate standard user accounts to admin status on the fly.
+
+---
+
+## Getting Started & Local Execution
+
+### Local Environment Setup
+1. **Clone project repository**:
    ```bash
    git clone https://github.com/sakshipandey2223/Sprint-Intelligent-AI-Project.git
    cd Sprint-Intelligent-AI-Project
    ```
-2. Install client & server dependencies:
+2. **Install Node modules**:
    ```bash
    npm install
    ```
-3. Run the development server (automatically seeds the database on first run):
+3. **Launch local dev server**:
    ```bash
    npm run dev
    ```
-4. Access the portal locally at `http://localhost:3000`.
+   *Note: This automatically initializes and seeds `/tmp/sprint_intelligence.db` if GCS is unavailable or empty.*
+
+4. **Verify bundle compilation**:
+   ```bash
+   npm run build
+   ```
 
 ---
-*Created by Sakshi Pandey (Engineering Manager).*
+*Created and Maintained by Sakshi Pandey (Engineering Manager).*
 
 
 
