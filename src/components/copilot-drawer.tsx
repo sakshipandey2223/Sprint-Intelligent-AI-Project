@@ -234,6 +234,7 @@ export default function CopilotDrawer() {
   const [showSlashMenu, setShowSlashMenu] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDark = theme === 'dark';
 
   // Auto-scroll to bottom of chat
@@ -246,6 +247,82 @@ export default function CopilotDrawer() {
       setTimeout(scrollToBottom, 100);
     }
   }, [isCopilotOpen, copilotMessages]);
+
+  // Background network animation loop
+  useEffect(() => {
+    if (!isCopilotOpen) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let width = (canvas.width = canvas.offsetWidth);
+    let height = (canvas.height = canvas.offsetHeight);
+
+    const handleResize = () => {
+      if (!canvas) return;
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    const pointsCount = 30;
+    const points: Array<{ x: number; y: number; vx: number; vy: number; radius: number }> = [];
+    for (let i = 0; i < pointsCount; i++) {
+      points.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        radius: Math.random() * 2 + 1,
+      });
+    }
+
+    const draw = () => {
+      ctx.clearRect(0, 0, width, height);
+
+      // Dynamic stroke coloring based on light/dark mode
+      const dotColor = isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)';
+      const lineColor = isDark ? 'rgba(45, 212, 167, 0.05)' : 'rgba(26, 115, 232, 0.05)';
+
+      for (let i = 0; i < pointsCount; i++) {
+        const p1 = points[i];
+        p1.x += p1.vx;
+        p1.y += p1.vy;
+
+        if (p1.x < 0 || p1.x > width) p1.vx *= -1;
+        if (p1.y < 0 || p1.y > height) p1.vy *= -1;
+
+        ctx.beginPath();
+        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+
+        for (let j = i + 1; j < pointsCount; j++) {
+          const p2 = points[j];
+          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          if (dist < 110) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = (1 - dist / 110) * 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isDark, isCopilotOpen]);
 
   // Build Gemini-compatible chat history from messages in state
   const buildHistory = () => {
@@ -319,7 +396,7 @@ export default function CopilotDrawer() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => toggleCopilot(false)}
-            className="fixed inset-0 bg-black/50 backdrop-blur-md z-45"
+            className="fixed inset-0 bg-black/45 backdrop-blur-sm z-45"
           />
 
           {/* Chat Container Drawer */}
@@ -327,7 +404,7 @@ export default function CopilotDrawer() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 26, stiffness: 220 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
             className={`fixed top-0 right-0 w-[500px] max-w-full h-screen border-l flex flex-col z-50 shadow-2xl transition-colors duration-300 ${
               isDark 
                 ? 'bg-slate-950/90 border-white/10 text-slate-100' 
@@ -335,12 +412,19 @@ export default function CopilotDrawer() {
             }`}
             style={{ backdropFilter: 'blur(20px)' }}
           >
+            {/* Live Interactive Background Canvas */}
+            <canvas 
+              ref={canvasRef} 
+              className="absolute inset-0 w-full h-full pointer-events-none opacity-40" 
+              style={{ zIndex: 0 }}
+            />
+
             {/* Header HUD panel */}
-            <div className="p-4 border-b flex flex-col gap-3" style={{ borderColor: 'var(--color-card-border)' }}>
+            <div className="p-4 border-b flex flex-col gap-3 relative z-10" style={{ borderColor: 'var(--color-card-border)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div 
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 animate-float-slow"
                     style={{ 
                       background: `${currentPersonaInfo.color}20`, 
                       border: `1px solid ${currentPersonaInfo.color}40`,
@@ -464,7 +548,7 @@ export default function CopilotDrawer() {
             </div>
 
             {/* Conversation Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
               <AnimatePresence initial={false}>
                 {copilotMessages.map((msg: Message) => {
                   const isUser = msg.sender === 'user';
@@ -486,10 +570,10 @@ export default function CopilotDrawer() {
                         style={{
                           background: isUser 
                             ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' 
-                            : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                            : (isDark ? 'rgba(255,255,255,0.04)' : '#ffffff'),
                           border: isUser ? 'none' : '1px solid var(--color-card-border)',
                           color: isUser ? '#ffffff' : 'var(--color-text-secondary)',
-                          boxShadow: isUser ? '0 4px 15px rgba(99, 102, 241, 0.2)' : 'none'
+                          boxShadow: isUser ? '0 4px 15px rgba(99, 102, 241, 0.2)' : '0 2px 8px rgba(0,0,0,0.03)'
                         }}
                       >
                         {isUser ? (
@@ -515,7 +599,7 @@ export default function CopilotDrawer() {
                   </span>
                   <div className="border rounded-2xl px-4 py-3 flex flex-col gap-2 relative overflow-hidden w-64 shadow-sm"
                     style={{
-                      background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                      background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
                       borderColor: 'var(--color-card-border)'
                     }}
                   >
@@ -545,9 +629,9 @@ export default function CopilotDrawer() {
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 15 }}
-                  className="mx-4 my-2 p-2 rounded-xl border flex flex-col gap-1 shadow-lg"
+                  className="mx-4 my-2 p-2 rounded-xl border flex flex-col gap-1 shadow-lg relative z-20"
                   style={{
-                    background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
+                    background: isDark ? 'rgba(15,23,42,0.95)' : '#ffffff',
                     borderColor: 'var(--color-card-border)'
                   }}
                 >
@@ -576,7 +660,7 @@ export default function CopilotDrawer() {
 
             {/* Quick Suggestions Cards Grid */}
             {!showSlashMenu && copilotMessages.length === 1 && (
-              <div className="p-4 border-t" style={{ borderColor: 'var(--color-card-border)' }}>
+              <div className="p-4 border-t relative z-10" style={{ borderColor: 'var(--color-card-border)' }}>
                 <span className="text-[9px] font-bold uppercase tracking-wider font-mono block mb-2" style={{ color: 'var(--color-text-faint)' }}>
                   Suggested queries
                 </span>
@@ -588,9 +672,9 @@ export default function CopilotDrawer() {
                         key={i}
                         disabled={copilotMutation.isPending}
                         onClick={() => handleSendMessage(qc.query)}
-                        className="p-3 rounded-xl border text-left flex flex-col gap-1 transition-all hover:-translate-y-0.5 cursor-pointer disabled:opacity-50"
+                        className="p-3 rounded-xl border text-left flex flex-col gap-1 transition-all hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 hover:shadow-md"
                         style={{
-                          background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                          background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
                           borderColor: 'var(--color-card-border)',
                         }}
                       >
@@ -612,42 +696,53 @@ export default function CopilotDrawer() {
                 e.preventDefault();
                 handleSendMessage(inputValue);
               }}
-              className="p-4 border-t flex items-center gap-2"
+              className="p-6 border-t flex flex-col gap-3 relative z-10"
               style={{ 
                 borderColor: 'var(--color-card-border)',
-                background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.01)'
+                background: isDark ? 'rgba(10, 15, 30, 0.95)' : 'rgba(248, 250, 252, 0.95)',
+                paddingBottom: '24px'
               }}
             >
-              <div className="flex-1 relative flex items-center">
-                <input
-                  type="text"
-                  placeholder="Ask anything, or type '/' for quick commands..."
-                  value={inputValue}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  disabled={copilotMutation.isPending}
-                  className="w-full bg-white/5 border rounded-xl px-4 py-3 text-xs outline-none transition-all"
-                  style={{
-                    background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)',
-                    borderColor: 'var(--color-card-border)',
-                    color: 'var(--color-text-primary)'
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder="Ask anything, or type '/' for quick commands..."
+                    value={inputValue}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    disabled={copilotMutation.isPending}
+                    className="w-full border rounded-2xl px-4 py-3 text-xs outline-none transition-all duration-300 pr-10"
+                    style={{
+                      background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                      borderColor: 'var(--color-card-border)',
+                      color: 'var(--color-text-primary)'
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = 'var(--color-accent)';
+                      e.target.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.15)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = 'var(--color-card-border)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSlashMenu(!showSlashMenu)}
+                    className="absolute right-3 p-1.5 rounded-lg text-xs font-mono font-bold hover:bg-white/5 transition-colors animate-pulse"
+                    style={{ color: 'var(--color-text-faint)' }}
+                  >
+                    /
+                  </button>
+                </div>
                 <button
-                  type="button"
-                  onClick={() => setShowSlashMenu(!showSlashMenu)}
-                  className="absolute right-3 p-1 rounded-lg text-xs font-mono font-bold hover:bg-white/5 transition"
-                  style={{ color: 'var(--color-text-faint)' }}
+                  type="submit"
+                  disabled={!inputValue.trim() || copilotMutation.isPending}
+                  className="w-10 h-10 shrink-0 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-violet-600/10 cursor-pointer hover:scale-[1.03]"
                 >
-                  /
+                  <Send className="w-4 h-4" />
                 </button>
               </div>
-              <button
-                type="submit"
-                disabled={!inputValue.trim() || copilotMutation.isPending}
-                className="w-10 h-10 shrink-0 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl flex items-center justify-center transition shadow-lg shadow-violet-600/10 cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-              </button>
             </form>
           </motion.div>
         </>

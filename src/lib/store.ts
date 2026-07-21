@@ -54,21 +54,22 @@ const initialFilters: FilterState = {
 const initialWelcomeMessage: Message = {
   id: 'welcome',
   sender: 'bot',
-  text: `### 👋 Welcome to Sprint Intelligence Copilot!
-I am analyzing **250 issues** across **10 sprints** in real time. 
+  text: `### ⚡ SYSTEM BOOT: COGNITIVE AGENT ONLINE
+All agile telemetry databases initialized and synced successfully.
 
-Here is the current state of **Sprint 10**:
-- **Sprint Health Score**: 🛡️ **84/100**
-- **Target Commitment**: **132 Story Points**
-- **Current Completion**: **22 Story Points**
-- **Completion Probability**: 🔴 **34%**
-- **Critical Blockers**: 🛑 **3 active**
+#### 🛰️ Core Diagnostics Overview:
+- **Telemetry Engine**: Native node:sqlite (10 Sprints aggregated)
+- **Delivery Confidence**: Real-time DORA model active
+- **Cognitive Model**: LLaMA-3.3-70B-Spec (Groq Speed Optimized)
+- **Security Scope**: Role-Based User Access Control
 
-*Ask me questions like:*
-- *What is blocking our sprint?*
-- *Who on the team is overloaded?*
-- *Can you generate an executive summary?*
-- *What are the biggest risks?*`,
+#### 🎯 AI Shortcuts & Telemetry Hub:
+- Use **\`/summary\`** for an executive Agile presentation.
+- Use **\`/blockers\`** to trace blockers and mitigation paths.
+- Use **\`/predict\`** to forecast sprint milestone completion.
+- Use **\`/workload\`** to audit developer capacity balance.
+
+*Ask a question or press '/' to select a directive. I am ready to process queries.*`,
   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
 };
 
