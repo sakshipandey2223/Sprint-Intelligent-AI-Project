@@ -114,6 +114,15 @@ export function getDB(): DatabaseSync {
       PRIMARY KEY (sprintId, day)
     );
 
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE,
+      password TEXT,
+      name TEXT,
+      role TEXT,
+      createdAt TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
       issueId TEXT,
@@ -385,3 +394,69 @@ export async function patchIssue(id: string, updates: { status?: string; isBlock
 
   return { id, status: newStatus, isBlocked: newBlocked === 1, blockedReason: newBlockedReason, assigneeId: newAssignee };
 }
+
+export async function authenticateUser(username: string, pass: string) {
+  if (!username || !pass) {
+    return { success: false, error: 'Username and password are required' };
+  }
+
+  // Default master admin account
+  if (username.trim().toLowerCase() === 'admin' && pass === 'admin') {
+    return {
+      success: true,
+      user: { id: 'admin', username: 'admin', name: 'Master Operator', role: 'Engineering Manager' },
+    };
+  }
+
+  await syncDbFromGcs();
+  const db = getDB();
+
+  const stmt = db.prepare("SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND password = ?");
+  const user = stmt.get(username.trim(), pass) as any;
+
+  if (!user) {
+    return { success: false, error: 'Invalid credentials. Check your username and passphrase.' };
+  }
+
+  return {
+    success: true,
+    user: { id: user.id, username: user.username, name: user.name, role: user.role || 'Sprint Operator' },
+  };
+}
+
+export async function registerUser(username: string, pass: string, name: string) {
+  if (!username || !pass || !name) {
+    return { success: false, error: 'Name, Operator ID, and passphrase are required.' };
+  }
+
+  const cleanUser = username.trim();
+  if (cleanUser.toLowerCase() === 'admin') {
+    return { success: false, error: 'The username "admin" is reserved.' };
+  }
+
+  await syncDbFromGcs();
+  const db = getDB();
+
+  // Check existing
+  const checkStmt = db.prepare("SELECT id FROM users WHERE LOWER(username) = LOWER(?)");
+  const existing = checkStmt.get(cleanUser);
+  if (existing) {
+    return { success: false, error: 'Operator ID already registered. Please sign in.' };
+  }
+
+  const id = `user-${Date.now()}`;
+  const insertStmt = db.prepare(`
+    INSERT INTO users (id, username, password, name, role, createdAt)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  insertStmt.run(id, cleanUser, pass, name.trim(), 'Sprint Developer', new Date().toISOString());
+
+  // Push new database snapshot to GCS
+  await syncDbToGcs();
+
+  return {
+    success: true,
+    user: { id, username: cleanUser, name: name.trim(), role: 'Sprint Developer' },
+  };
+}
+

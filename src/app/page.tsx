@@ -2,18 +2,27 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import './login.css'; // Import the isolated CSS for the login page
+import { Shield, Lock, User, Key, UserPlus, LogIn, Sparkles, CheckCircle2, ArrowRight, Activity, Terminal } from 'lucide-react';
+import './login.css';
 
 export default function Home() {
   const router = useRouter();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [showPassword, setShowPassword] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // Form State
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+
+  // Canvas & Terminal simulation
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLElement>(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [terminalRows, setTerminalRows] = useState<number>(0);
-  const [errorMsg, setErrorMsg] = useState('');
 
-  // Terminal boot log simulation
   useEffect(() => {
     const timer = setInterval(() => {
       setTerminalRows(prev => {
@@ -21,11 +30,11 @@ export default function Home() {
         clearInterval(timer);
         return prev;
       });
-    }, 600);
+    }, 500);
     return () => clearInterval(timer);
   }, []);
 
-  // Ambient network graph
+  // Ambient network canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     const stage = stageRef.current;
@@ -48,13 +57,13 @@ export default function Home() {
     };
 
     const initNodes = () => {
-      const count = Math.max(26, Math.floor((stage.clientWidth * stage.clientHeight) / 22000));
+      const count = Math.max(24, Math.floor((stage.clientWidth * stage.clientHeight) / 20000));
       nodes = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.25 * window.devicePixelRatio,
-        vy: (Math.random() - 0.5) * 0.25 * window.devicePixelRatio,
-        r: (Math.random() * 1.4 + 0.9) * window.devicePixelRatio
+        vx: (Math.random() - 0.5) * 0.3 * window.devicePixelRatio,
+        vy: (Math.random() - 0.5) * 0.3 * window.devicePixelRatio,
+        r: (Math.random() * 1.5 + 1.0) * window.devicePixelRatio,
       }));
     };
 
@@ -62,19 +71,19 @@ export default function Home() {
       ctx.clearRect(0, 0, w, h);
       const maxDist = 150 * window.devicePixelRatio;
 
-      for (const n of nodes){
+      for (const n of nodes) {
         n.x += n.vx; n.y += n.vy;
         if (n.x < 0 || n.x > w) n.vx *= -1;
         if (n.y < 0 || n.y > h) n.vy *= -1;
       }
 
-      for (let i = 0; i < nodes.length; i++){
-        for (let j = i + 1; j < nodes.length; j++){
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i], b = nodes[j];
           const dx = a.x - b.x, dy = a.y - b.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          if (dist < maxDist){
-            const alpha = (1 - dist / maxDist) * 0.32;
+          if (dist < maxDist) {
+            const alpha = (1 - dist / maxDist) * 0.35;
             ctx.strokeStyle = `rgba(45,212,167,${alpha})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -85,10 +94,10 @@ export default function Home() {
         }
       }
 
-      for (const n of nodes){
+      for (const n of nodes) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(219,230,239,0.55)';
+        ctx.fillStyle = 'rgba(219,230,239,0.6)';
         ctx.fill();
       }
 
@@ -108,147 +117,253 @@ export default function Home() {
     };
 
     window.addEventListener('resize', handleResize);
-    
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    if (formData.get('handle') === 'admin' && formData.get('pass') === 'admin') {
-      setErrorMsg('');
-      setIsAuthenticating(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setIsAuthenticating(true);
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: mode,
+          username,
+          password,
+          name,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.error || 'Authentication failed. Please try again.');
+        setIsAuthenticating(false);
+        return;
+      }
+
+      if (mode === 'signup') {
+        setSuccessMsg('Account created successfully! Redirecting to dashboard...');
+      } else {
+        setSuccessMsg('Authentication successful! Loading your dashboard...');
+      }
+
       setTimeout(() => {
         router.push('/dashboard');
-      }, 800);
-    } else {
-      setErrorMsg('Invalid credentials. Please use admin / admin.');
+      }, 900);
+    } catch {
+      setErrorMsg('Network error connecting to authentication service.');
+      setIsAuthenticating(false);
     }
   };
 
   return (
     <div className="sentry-login-wrapper">
       <div className="grid-fade"></div>
-      
+
       <div className="shell">
-        {/* ============ LEFT: live stage ============ */}
+        {/* ============ LEFT: live network & status stage ============ */}
         <section className="stage" aria-hidden="true" ref={stageRef}>
           <canvas id="net" className="net-canvas" ref={canvasRef}></canvas>
           <div className="scan-line"></div>
 
           <div className="stage-top">
             <div className="brand">
-              <div className="brand-mark">S</div>
+              <div className="brand-mark">
+                <Activity style={{ width: '20px', height: '20px', color: '#fff' }} />
+              </div>
               <div>
-                <div className="brand-name">Sprint Intelligent KPI Tracking Agent</div>
-                <div className="brand-tag">DASHBOARD</div>
+                <div className="brand-name">Sprint Intelligent KPI Tracking</div>
+                <div className="brand-tag">GCP CLOUD ENGINE</div>
               </div>
             </div>
-            <div className="status-pill"><span className="status-dot"></span>LINK SECURE</div>
+            <div className="status-pill">
+              <span className="status-dot"></span>
+              GCS PERSISTENT
+            </div>
           </div>
 
           <div className="stage-mid">
             <div>
-              <div className="headline">Data-driven<br/>insights by <span className="accent">design</span>, not <span className="accent2">assumption</span>.</div>
-              <p className="sub">Every session on this Dashboard is encrypted end-to-end and verified against known-good signatures before it ever reaches the vault. Nothing sneaky. Just disciplined tracking.</p>
+              <div className="headline">
+                Data-driven <span className="accent">intelligence</span> for modern engineering.
+              </div>
+              <p className="sub">
+                Real-time velocity tracking, automated risk radar, and Gemini 2.0 Flash / LLaMA 3.3 AI Copilot integration.
+              </p>
             </div>
 
             <div className="term">
-              {terminalRows >= 1 && <div className="term-row"><span className="tag">[boot]</span> initializing secure channel<span className="ok">... done</span></div>}
-              {terminalRows >= 2 && <div className="term-row"><span className="tag">[tls]</span> handshake verified <span className="ok">✓ 256-bit</span></div>}
-              {terminalRows >= 3 && <div className="term-row"><span className="tag">[scan]</span> zero known vulnerabilities <span className="ok">✓ clear</span></div>}
-              {terminalRows >= 4 && <div className="term-row"><span className="tag">[wait]</span> awaiting credentials<span className="caret"></span></div>}
+              {terminalRows >= 1 && <div className="term-row"><span className="tag">[gcp]</span> cloud storage mounted<span className="ok">... active</span></div>}
+              {terminalRows >= 2 && <div className="term-row"><span className="tag">[db]</span> sqlite synced with GCS<span className="ok"> ✓ ready</span></div>}
+              {terminalRows >= 3 && <div className="term-row"><span className="tag">[ai]</span> groq & gemini engines<span className="ok"> ✓ online</span></div>}
+              {terminalRows >= 4 && <div className="term-row"><span className="tag">[auth]</span> awaiting user sign-in<span className="caret"></span></div>}
             </div>
           </div>
 
           <div className="stage-foot">
             <div>
-              <div className="metric-label">ENCRYPTION</div>
-              <div className="metric-value teal">AES-256</div>
+              <div className="metric-label">CLOUD ENGINE</div>
+              <div className="metric-value teal">GCP Cloud Run</div>
             </div>
             <div>
-              <div className="metric-label">NODES MONITORED</div>
-              <div className="metric-value">1,204</div>
+              <div className="metric-label">AI COPILOT</div>
+              <div className="metric-value">Groq + Gemini</div>
             </div>
             <div>
-              <div className="metric-label">UPTIME</div>
-              <div className="metric-value">99.98%</div>
+              <div className="metric-label">DATA VAULT</div>
+              <div className="metric-value">GCS Storage</div>
             </div>
           </div>
         </section>
 
-        {/* ============ RIGHT: login panel ============ */}
+        {/* ============ RIGHT: login / signup panel ============ */}
         <section className="panel">
-          <div className="panel-eyebrow">Secure sign-in</div>
-          <h1 className="panel-title">Welcome to Sprint Dashboard</h1>
-          <p className="panel-sub">Sign in with your verified credentials to access team performance and KPI tracking.</p>
+          {/* Main Title Highlight */}
+          <div className="welcome-banner">
+            <div className="welcome-tag">
+              <Sparkles style={{ width: '14px', height: '14px', color: '#2dd4a7' }} />
+              AUTHENTICATION PORTAL
+            </div>
+            <h1 className="welcome-headline">
+              Welcome to Sprint Dashboard
+            </h1>
+            <p className="welcome-sub">
+              Access real-time Agile telemetry, developer capacity, and AI insights.
+            </p>
+          </div>
 
-          <form autoComplete="off" onSubmit={handleLogin}>
+          {/* Mode Switcher Tabs */}
+          <div className="auth-tabs">
+            <button
+              type="button"
+              className={`auth-tab ${mode === 'signin' ? 'active' : ''}`}
+              onClick={() => { setMode('signin'); setErrorMsg(''); setSuccessMsg(''); }}
+            >
+              <LogIn style={{ width: '15px', height: '15px' }} />
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`auth-tab ${mode === 'signup' ? 'active' : ''}`}
+              onClick={() => { setMode('signup'); setErrorMsg(''); setSuccessMsg(''); }}
+            >
+              <UserPlus style={{ width: '15px', height: '15px' }} />
+              Create Account
+            </button>
+          </div>
+
+          <form autoComplete="off" onSubmit={handleSubmit} className="auth-form">
+            {mode === 'signup' && (
+              <div className="field">
+                <label htmlFor="name">Full Name</label>
+                <div className="input-wrap">
+                  <User style={{ width: '16px', height: '16px', color: '#7d90a3' }} />
+                  <input
+                    id="name"
+                    name="name"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="field">
-              <label htmlFor="handle">Operator ID</label>
+              <label htmlFor="username">Operator ID / Username</label>
               <div className="input-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6 12 13 2 6"/><path d="M2 6h20v12H2z"/></svg>
-                <input id="handle" name="handle" type="text" placeholder="admin" required />
+                <Shield style={{ width: '16px', height: '16px', color: '#7d90a3' }} />
+                <input
+                  id="username"
+                  name="username"
+                  type="text"
+                  placeholder="Enter your Operator ID"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
             <div className="field">
-              <label htmlFor="pass">Passphrase</label>
+              <label htmlFor="password">Passphrase</label>
               <div className="input-wrap">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <input id="pass" name="pass" type={showPassword ? 'text' : 'password'} placeholder="••••••••••••" required />
-                <button type="button" className="toggle-visibility" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <Lock style={{ width: '16px', height: '16px', color: '#7d90a3' }} />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your passphrase"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="toggle-visibility"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'}
+                >
+                  <Key style={{ width: '14px', height: '14px', color: '#7d90a3' }} />
                 </button>
               </div>
             </div>
 
-            <div className="row-between">
-              <label className="checkline"><input type="checkbox" defaultChecked /> Keep this device trusted</label>
-              <a href="#" className="link">Forgot passphrase?</a>
-            </div>
+            {mode === 'signin' && (
+              <div className="row-between">
+                <label className="checkline">
+                  <input type="checkbox" defaultChecked /> Remember this session
+                </label>
+              </div>
+            )}
 
-            {errorMsg && <div style={{ color: 'var(--danger)', fontSize: '13px', marginTop: '4px' }}>{errorMsg}</div>}
+            {errorMsg && (
+              <div className="error-banner">
+                {errorMsg}
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="success-banner">
+                <CheckCircle2 style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                {successMsg}
+              </div>
+            )}
 
             <button type="submit" className="btn-primary" disabled={isAuthenticating}>
               <span className="shine"></span>
-              {isAuthenticating ? 'Authenticating...' : 'Authenticate'}
-              {!isAuthenticating && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>}
+              {isAuthenticating
+                ? (mode === 'signup' ? 'Creating Account...' : 'Authenticating...')
+                : (mode === 'signup' ? 'Create Account & Sign In' : 'Authenticate & Enter')}
+              {!isAuthenticating && <ArrowRight style={{ width: '16px', height: '16px' }} />}
             </button>
           </form>
 
-          <div className="divider">OR CONTINUE WITH</div>
-
-          <div className="alt-methods">
-            <button className="alt-btn" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.5c.5.1.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.28.1-2.66 0 0 .84-.27 2.75 1.02a9.4 9.4 0 0 1 5 0c1.9-1.3 2.75-1.02 2.75-1.02.55 1.38.2 2.41.1 2.66.64.7 1.03 1.59 1.03 2.68 0 3.84-2.35 4.68-4.58 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"/></svg>
-              Passkey
-            </button>
-            <button className="alt-btn" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
-              Authenticator
-            </button>
-          </div>
-
+          {/* Footer Security Badges */}
           <div className="trust-strip">
             <div className="trust-item">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 3 6v6c0 5 4 8.5 9 10 5-1.5 9-5 9-10V6l-9-4Z"/></svg>
-              AUDITED
+              <Shield style={{ width: '12px', height: '12px' }} />
+              GCP CLOUD SECURE
             </div>
             <div className="trust-item">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              ENCRYPTED
+              <Lock style={{ width: '12px', height: '12px' }} />
+              GCS VAULT PERSISTENT
             </div>
             <div className="trust-item">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-              NO DATA SOLD
+              <Sparkles style={{ width: '12px', height: '12px' }} />
+              AI COPILOT READY
             </div>
           </div>
-
-          <p className="panel-footer">New operator? <a href="#" className="link">Request an invitation</a></p>
         </section>
       </div>
     </div>
