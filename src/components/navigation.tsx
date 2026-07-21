@@ -36,14 +36,14 @@ const groups = [
   {
     label: 'System',
     items: [
-      { name: 'Settings', href: '/settings', icon: Settings, sub: 'Config & weights' },
+      { name: 'Settings', href: '/settings', icon: Settings, sub: 'Admin Only', badge: '🔒 ADMIN' },
     ],
   },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { toggleCopilot, isCopilotOpen, theme } = useAppStore();
+  const { toggleCopilot, isCopilotOpen, theme, currentUser, setCurrentUser } = useAppStore();
   const isLight = theme === 'light';
 
   return (
@@ -227,8 +227,8 @@ export default function Navigation() {
         borderTop: isLight ? '1px solid rgba(203,213,225,0.40)' : '1px solid rgba(51,65,85,0.20)',
       }}>
         <img
-          src="https://api.dicebear.com/8.x/avataaars/svg?seed=sakshi&backgroundColor=22C55E&backgroundType=gradientLinear"
-          alt="Sakshi Pandey"
+          src={`https://api.dicebear.com/8.x/avataaars/svg?seed=${currentUser?.username || 'admin'}&backgroundColor=22C55E&backgroundType=gradientLinear`}
+          alt={currentUser?.name || 'User'}
           style={{
             width: '34px', height: '34px', borderRadius: '9px',
             border: '1px solid rgba(34,197,94,0.20)',
@@ -236,11 +236,11 @@ export default function Navigation() {
           }}
         />
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: isLight ? '#0f172a' : '#F8FAFC', lineHeight: 1.25 }}>
-            Sakshi Pandey
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 700, color: isLight ? '#0f172a' : '#F8FAFC', lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {currentUser?.name || 'Master Admin'}
           </div>
-          <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: '#475569' }}>
-            Engineering Manager
+          <div style={{ fontFamily: 'var(--font-data)', fontSize: '10px', color: currentUser?.role === 'Admin' ? '#22c55e' : '#6366f1', fontWeight: 700 }}>
+            {currentUser?.role || 'Admin'}
           </div>
         </div>
         <GitBranch style={{ width: '13px', height: '13px', color: '#475569', flexShrink: 0 }} />
@@ -249,13 +249,16 @@ export default function Navigation() {
       {/* ── Log Off ── */}
       <div style={{ padding: '0 10px 14px' }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
-          <button style={{
-            width: '100%', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
-            background: 'transparent', border: '1px solid rgba(239,68,68,0.3)',
-            color: '#ef4444', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            transition: 'all 200ms ease',
-          }}>
+          <button
+            onClick={() => setCurrentUser(null)}
+            style={{
+              width: '100%', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer',
+              background: 'transparent', border: '1px solid rgba(239,68,68,0.3)',
+              color: '#ef4444', fontFamily: 'var(--font-ui)', fontSize: '12px', fontWeight: 600,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              transition: 'all 200ms ease',
+            }}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Log Off
           </button>

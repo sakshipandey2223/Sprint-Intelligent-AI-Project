@@ -16,13 +16,22 @@ export interface Message {
   timestamp: string;
 }
 
+export interface UserSession {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+}
+
 interface AppState {
+  currentUser: UserSession | null;
   activeSprintId: number;
   filters: FilterState;
   isCopilotOpen: boolean;
   copilotMessages: Message[];
   theme: 'dark' | 'light';
   visualTheme: 'cyber-pulse' | 'aurora-nebula' | 'emerald-matrix' | 'royal-sunset';
+  setCurrentUser: (user: UserSession | null) => void;
   setActiveSprintId: (id: number) => void;
   setFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
@@ -64,6 +73,7 @@ Here is the current state of **Sprint 10**:
 };
 
 export const useAppStore = create<AppState>((set) => ({
+  currentUser: null,
   activeSprintId: 10,
   filters: initialFilters,
   isCopilotOpen: false,
@@ -71,6 +81,7 @@ export const useAppStore = create<AppState>((set) => ({
   theme: 'light',
   visualTheme: 'cyber-pulse',
 
+  setCurrentUser: (user) => set({ currentUser: user }),
   setActiveSprintId: (id) => set({ activeSprintId: id }),
   
   setFilter: (key, value) =>

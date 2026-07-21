@@ -400,11 +400,21 @@ export async function authenticateUser(username: string, pass: string) {
     return { success: false, error: 'Username and password are required' };
   }
 
-  // Default master admin account
-  if (username.trim().toLowerCase() === 'admin' && pass === 'admin') {
+  const cleanUser = username.trim().toLowerCase();
+
+  // Default Master Admin
+  if (cleanUser === 'admin' && pass === 'admin') {
     return {
       success: true,
-      user: { id: 'admin', username: 'admin', name: 'Master Operator', role: 'Engineering Manager' },
+      user: { id: 'admin', username: 'admin', name: 'Master Admin', role: 'Admin' },
+    };
+  }
+
+  // Default Regular User
+  if (cleanUser === 'user' && pass === 'user') {
+    return {
+      success: true,
+      user: { id: 'default-user', username: 'user', name: 'Standard User', role: 'User' },
     };
   }
 
@@ -412,7 +422,7 @@ export async function authenticateUser(username: string, pass: string) {
   const db = getDB();
 
   const stmt = db.prepare("SELECT * FROM users WHERE LOWER(username) = LOWER(?) AND password = ?");
-  const user = stmt.get(username.trim(), pass) as any;
+  const user = stmt.get(cleanUser, pass) as any;
 
   if (!user) {
     return { success: false, error: 'Invalid credentials. Check your username and passphrase.' };
@@ -420,7 +430,7 @@ export async function authenticateUser(username: string, pass: string) {
 
   return {
     success: true,
-    user: { id: user.id, username: user.username, name: user.name, role: user.role || 'Sprint Operator' },
+    user: { id: user.id, username: user.username, name: user.name, role: user.role || 'User' },
   };
 }
 
@@ -430,8 +440,8 @@ export async function registerUser(username: string, pass: string, name: string)
   }
 
   const cleanUser = username.trim();
-  if (cleanUser.toLowerCase() === 'admin') {
-    return { success: false, error: 'The username "admin" is reserved.' };
+  if (cleanUser.toLowerCase() === 'admin' || cleanUser.toLowerCase() === 'user') {
+    return { success: false, error: 'The usernames "admin" and "user" are reserved.' };
   }
 
   await syncDbFromGcs();
@@ -445,18 +455,67 @@ export async function registerUser(username: string, pass: string, name: string)
   }
 
   const id = `user-${Date.now()}`;
+  const defaultRole = 'User'; // New sign-ups are ALWAYS User role by default
   const insertStmt = db.prepare(`
     INSERT INTO users (id, username, password, name, role, createdAt)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
-  insertStmt.run(id, cleanUser, pass, name.trim(), 'Sprint Developer', new Date().toISOString());
+  insertStmt.run(id, cleanUser, pass, name.trim(), defaultRole, new Date().toISOString());
 
   // Push new database snapshot to GCS
   await syncDbToGcs();
 
   return {
     success: true,
-    user: { id, username: cleanUser, name: name.trim(), role: 'Sprint Developer' },
+    user: { id, username: cleanUser, name: name.trim(), role: defaultRole },
   };
 }
+
+export async function getAllUsers() {
+  await syncDbFromGcs();
+  const db = getDB();
+
+  const stmt = db.prepare("SELECT id, username, name, role, createdAt FROM users ORDER BY createdAt DESC");
+  const dbUsers = stmt.all() as any[];
+
+  const defaultAdmin = { id: 'admin', username: 'admin', name: 'Master Admin', role: 'Admin', createdAt: 'System Default' };
+  const defaultUser  = { id: 'default-user', username: 'user', name: 'Standard User', role: 'User', createdAt: 'System Default' };
+
+  // Combine defaults and registered users, avoiding duplicates
+  const allUsers = [defaultAdmin, defaultUser];
+  for (const u of dbUsers) {
+    if (!allUsers.some(existing => existing.username.toLowerCase() === u.username.toLowerCase())) {
+      allUsers.push(u);
+    }
+  }
+
+  return allUsers;
+}
+
+export async function updateUserRole(userId: string, newRole: 'Admin' | 'User') {
+  if (userId === 'admin') {
+    return { success: false, error: 'The Master Admin role cannot be modified.' };
+  }
+
+  await syncDbFromGcs();
+  const db = getDB();
+
+  if (userId === 'default-user') {
+    // If updating default-user, create database record
+    const insertStmt = db.prepare(`
+      INSERT INTO users (id, username, password, name, role, createdAt)
+      VALUES (?, 'user', 'user', 'Standard User', ?, ?)
+      ON CONFLICT(username) DO UPDATE SET role = ?
+    `);
+    const now = new Date().toISOString();
+    insertStmt.run('default-user', newRole, now, newRole);
+  } else {
+    const updateStmt = db.prepare("UPDATE users SET role = ? WHERE id = ?");
+    updateStmt.run(newRole, userId);
+  }
+
+  await syncDbToGcs();
+  return { success: true, userId, newRole };
+}
+
 

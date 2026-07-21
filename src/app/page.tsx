@@ -3,10 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, Lock, User, Key, UserPlus, LogIn, Sparkles, CheckCircle2, ArrowRight, Activity, Terminal } from 'lucide-react';
+import { useAppStore } from '@/lib/store';
 import './login.css';
 
 export default function Home() {
   const router = useRouter();
+  const { setCurrentUser } = useAppStore();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -147,6 +149,10 @@ export default function Home() {
         setErrorMsg(data.error || 'Authentication failed. Please try again.');
         setIsAuthenticating(false);
         return;
+      }
+
+      if (data.user) {
+        setCurrentUser(data.user);
       }
 
       if (mode === 'signup') {
