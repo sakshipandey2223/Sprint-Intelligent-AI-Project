@@ -2,18 +2,30 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Lock, User, Key, UserPlus, LogIn, Sparkles, CheckCircle2, ArrowRight, Activity, Terminal } from 'lucide-react';
+import { Shield, Lock, User, Key, UserPlus, LogIn, Sparkles, CheckCircle2, ArrowRight, Activity, Terminal, Sun, Moon, Eye, EyeOff } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import './login.css';
 
 export default function Home() {
   const router = useRouter();
-  const { setCurrentUser } = useAppStore();
+  const { setCurrentUser, theme, setTheme } = useAppStore();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [showPassword, setShowPassword] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const isLight = theme === 'light';
+
+  useEffect(() => {
+    if (isLight) {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  }, [isLight]);
 
   // Form State
   const [name, setName] = useState('');
@@ -79,15 +91,19 @@ export default function Home() {
         if (n.y < 0 || n.y > h) n.vy *= -1;
       }
 
+      const isLightMode = document.documentElement.classList.contains('light');
+
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const a = nodes[i], b = nodes[j];
           const dx = a.x - b.x, dy = a.y - b.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
           if (dist < maxDist) {
-            const alpha = (1 - dist / maxDist) * 0.35;
-            ctx.strokeStyle = `rgba(45,212,167,${alpha})`;
-            ctx.lineWidth = 1;
+            const alpha = (1 - dist / maxDist) * 0.45;
+            ctx.strokeStyle = isLightMode 
+              ? `rgba(26, 115, 232, ${alpha * 1.5})` 
+              : `rgba(45, 212, 167, ${alpha})`;
+            ctx.lineWidth = isLightMode ? 1.4 : 1.0;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
@@ -99,7 +115,9 @@ export default function Home() {
       for (const n of nodes) {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(219,230,239,0.6)';
+        ctx.fillStyle = isLightMode 
+          ? 'rgba(26, 115, 232, 0.7)' 
+          : 'rgba(219, 230, 239, 0.6)';
         ctx.fill();
       }
 
@@ -136,7 +154,7 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: mode,
+          action: mode === 'signup' ? 'register' : 'login',
           username,
           password,
           name,
@@ -173,6 +191,36 @@ export default function Home() {
   return (
     <div className="sentry-login-wrapper">
       <div className="grid-fade"></div>
+
+      {/* Theme Toggle Button */}
+      <button
+        type="button"
+        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+        style={{
+          position: 'absolute',
+          top: '24px',
+          right: '24px',
+          padding: '10px',
+          borderRadius: '12px',
+          background: 'var(--panel-2)',
+          border: '1px solid var(--line)',
+          color: 'var(--text)',
+          cursor: 'pointer',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.25s ease',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+        }}
+        title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} Mode`}
+      >
+        {theme === 'light' ? (
+          <Moon style={{ width: '16px', height: '16px', color: '#1A73E8' }} />
+        ) : (
+          <Sun style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+        )}
+      </button>
 
       <div className="shell">
         {/* ============ LEFT: live network & status stage ============ */}
@@ -320,7 +368,11 @@ export default function Home() {
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide passphrase' : 'Show passphrase'}
                 >
-                  <Key style={{ width: '14px', height: '14px', color: '#7d90a3' }} />
+                  {showPassword ? (
+                    <EyeOff style={{ width: '15px', height: '15px', color: '#7d90a3' }} />
+                  ) : (
+                    <Eye style={{ width: '15px', height: '15px', color: '#7d90a3' }} />
+                  )}
                 </button>
               </div>
             </div>
