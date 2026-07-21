@@ -10,7 +10,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Issue identifier is required' }, { status: 400 });
     }
 
-    const updatedIssue = patchIssue(id, { status, isBlocked, blockedReason, assigneeId });
+    const updatedIssue = await patchIssue(id, { status, isBlocked, blockedReason, assigneeId });
 
     if (!updatedIssue) {
       return NextResponse.json({ error: 'Issue not found in database' }, { status: 404 });

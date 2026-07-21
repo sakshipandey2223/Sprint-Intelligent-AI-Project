@@ -1,19 +1,50 @@
 // @ts-ignore
 import { DatabaseSync } from 'node:sqlite';
 import path from 'path';
+import fs from 'fs';
+import { Storage } from '@google-cloud/storage';
 import { generateDashboardData } from './data-generator';
 
-const DB_PATH = process.env.HOME ? path.join(process.env.HOME, 'data', 'sprint_intelligence.db') : path.join(process.cwd(), 'sprint_intelligence.db');
+const DB_PATH = path.join('/tmp', 'sprint_intelligence.db');
+const BUCKET_NAME = 'sakshiaiproject-sprint-data';
+const FILE_NAME = 'sprint_intelligence.db';
+let databaseInstance: DatabaseSync | null = null;
+let storage: Storage | null = null;
+
+function getStorageClient(): Storage {
+  if (!storage) {
+    storage = new Storage();
+  }
+  return storage;
+}
+
+async function syncDbFromGcs() {
+  try {
+    const gcs = getStorageClient();
+    const file = gcs.bucket(BUCKET_NAME).file(FILE_NAME);
+    const [exists] = await file.exists();
+    if (exists) {
+      await file.download({ destination: DB_PATH });
+    }
+  } catch (error) {
+    console.error('Failed to download DB from GCS:', error);
+  }
+}
+
+async function syncDbToGcs() {
+  try {
+    const gcs = getStorageClient();
+    await gcs.bucket(BUCKET_NAME).upload(DB_PATH, {
+      destination: FILE_NAME,
+    });
+  } catch (error) {
+    console.error('Failed to upload DB to GCS:', error);
+  }
+}
 let databaseInstance: DatabaseSync | null = null;
 
 export function getDB(): DatabaseSync {
   if (databaseInstance) return databaseInstance;
-
-  const fs = require('fs');
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
 
   const db = new DatabaseSync(DB_PATH);
   databaseInstance = db;
@@ -192,7 +223,8 @@ function seedDatabase(db: DatabaseSync) {
 }
 
 // Data query aggregators to support dashboard route updates
-export function getDashboardTelemetry(sprintId: number | null) {
+export async function getDashboardTelemetry(sprintId: number | null) {
+  await syncDbFromGcs();
   const db = getDB();
 
   // Load Sprints
@@ -328,7 +360,8 @@ export function getDashboardTelemetry(sprintId: number | null) {
   };
 }
 
-export function patchIssue(id: string, updates: { status?: string; isBlocked?: boolean; blockedReason?: string; assigneeId?: string }) {
+export async function patchIssue(id: string, updates: { status?: string; isBlocked?: boolean; blockedReason?: string; assigneeId?: string }) {
+  await syncDbFromGcs();
   const db = getDB();
 
   const getStmt = db.prepare("SELECT * FROM issues WHERE id = ?");
@@ -347,6 +380,8 @@ export function patchIssue(id: string, updates: { status?: string; isBlocked?: b
     WHERE id = ?
   `);
   updateStmt.run(newStatus, newBlocked, newBlockedReason, newAssignee, id);
+
+  await syncDbToGcs();
 
   return { id, status: newStatus, isBlocked: newBlocked === 1, blockedReason: newBlockedReason, assigneeId: newAssignee };
 }

@@ -68,7 +68,7 @@ export const useAppStore = create<AppState>((set) => ({
   filters: initialFilters,
   isCopilotOpen: false,
   copilotMessages: [initialWelcomeMessage],
-  theme: 'dark',
+  theme: 'light',
   visualTheme: 'cyber-pulse',
 
   setActiveSprintId: (id) => set({ activeSprintId: id }),

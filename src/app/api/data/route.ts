@@ -15,7 +15,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const data = getDashboardTelemetry(sprintId);
+    const data = await getDashboardTelemetry(sprintId);
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch dashboard data' }, { status: 500 });
