@@ -24,3 +24,6 @@ steps:
 
 images:
   - 'us-central1-docker.pkg.dev/$PROJECT_ID/repo/sprint-dashboard:$COMMIT_SHA'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
