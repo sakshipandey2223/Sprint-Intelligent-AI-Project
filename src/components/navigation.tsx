@@ -29,7 +29,7 @@ const groups = [
     label: 'Intelligence',
     items: [
       { name: 'Analytics',    href: '/analytics',   icon: BarChart3, sub: 'Lead & Cycle time' },
-      { name: 'AI Insights',  href: '/ai-insights', icon: Brain,     sub: 'Gemini Analysis', badge: '✨ NEW' },
+      { name: 'AI Insights',  href: '/ai-insights', icon: Brain,     sub: 'Groq & Gemini', badge: '✨ NEW' },
       { name: 'AI Reports',   href: '/reports',     icon: FileText,  sub: 'Auto summaries', badge: 'AI' },
     ],
   },

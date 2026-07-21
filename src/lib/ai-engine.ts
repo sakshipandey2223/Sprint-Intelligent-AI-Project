@@ -31,36 +31,50 @@ You have deep expertise in:
 }
 
 function buildContextPrompt(data: any): string {
-  const active = data.sprints?.find((s: any) => s.status === 'active');
+  const active = data.sprints?.find((s: any) => s.status === 'active') || {};
   const completed = data.sprints?.filter((s: any) => s.status === 'completed') || [];
   const blockedIssues = data.issues?.filter((i: any) => i.isBlocked) || [];
   const overloaded = data.developers?.filter((d: any) => d.assignedPoints > d.capacityPoints) || [];
+  const activeIssues = data.issues?.filter((i: any) => i.sprintId === active.id) || [];
 
-  return `## Live Sprint Dashboard Context
+  const statusCounts = activeIssues.reduce((acc: any, i: any) => {
+    acc[i.status] = (acc[i.status] || 0) + 1;
+    return acc;
+  }, {});
 
-### Active Sprint
-${active ? JSON.stringify(active, null, 2) : 'No active sprint'}
+  const devSummary = data.developers?.map((d: any) => 
+    `- ${d.name} (${d.role}): Assigned ${d.assignedPoints}/${d.capacityPoints} SP (${d.utilization}% load, Defect density: ${d.defectDensity})`
+  ).join('\n') || '';
 
-### Completed Sprints (History)
-${JSON.stringify(completed.slice(-3), null, 2)}
+  const blockedSummary = blockedIssues.map((i: any) => 
+    `- [${i.id}] ${i.title} (${i.storyPoints} SP, Assignee: ${i.assigneeId || 'Unassigned'}) - Reason: ${i.blockedReason || 'Unknown'}`
+  ).join('\n') || 'None';
 
-### All Developers & Workload
-${JSON.stringify(data.developers, null, 2)}
+  const epicSummary = data.epics?.map((e: any) => 
+    `- ${e.name}: ${e.progress}% complete (${e.completedPoints}/${e.totalPoints} SP)`
+  ).join('\n') || '';
 
-### Blocked Issues (${blockedIssues.length} total)
-${JSON.stringify(blockedIssues, null, 2)}
+  const historyVelocity = completed.slice(-3).map((s: any) => `${s.name}: ${s.completedPoints} SP`).join(', ');
 
-### Overloaded Developers (${overloaded.length} total)
-${JSON.stringify(overloaded, null, 2)}
+  return `## Live Sprint Summary Context
 
-### Epics Progress
-${JSON.stringify(data.epics, null, 2)}
+### Active Sprint: ${active.name || 'Sprint 10'} (ID: ${active.id})
+- Status: ${active.status} | Target: ${active.targetPoints} SP | Completed: ${active.completedPoints} SP | Velocity: ${active.velocity} SP | Health Score: ${active.healthScore}/100
+- Issue Breakdown: ${Object.entries(statusCounts).map(([k, v]) => `${k}: ${v}`).join(', ')}
 
-### Analytics Summary
-${JSON.stringify(data.analyticsSummary, null, 2)}
+### Team Capacity & Workload (${overloaded.length} overloaded)
+${devSummary}
 
-### All Issues in Active Sprint
-${JSON.stringify(data.issues?.filter((i: any) => i.sprintId === active?.id), null, 2)}`;
+### Critical Blockers (${blockedIssues.length} total)
+${blockedSummary}
+
+### Epics Overview
+${epicSummary}
+
+### Analytics & History
+- Historical Velocity: ${historyVelocity}
+- Completion Probability: ${data.analyticsSummary?.completionProbability || 'N/A'}%
+- Defect Density: ${data.analyticsSummary?.defectDensity || 'N/A'} bugs/SP`;
 }
 
 // ── Groq engine (free, ultra-fast) ────────────────────────────────
@@ -72,14 +86,28 @@ async function callWithGroq(systemPrompt: string, userMessage: string, history: 
     { role: 'user', content: userMessage },
   ];
 
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
-    messages,
-    temperature: 0.7,
-    max_tokens: 2048,
-  });
-
-  return completion.choices[0]?.message?.content || 'No response from AI.';
+  try {
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages,
+      temperature: 0.7,
+      max_tokens: 2048,
+    });
+    return completion.choices[0]?.message?.content || 'No response from AI.';
+  } catch (err: any) {
+    // If 70b rate limit (429) hit, fallback to super-high TPM 8b model
+    if (err?.status === 429 || err?.message?.includes('rate_limit')) {
+      console.warn('Groq 70b rate limit hit, falling back to llama-3.1-8b-instant');
+      const fallbackCompletion = await groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages,
+        temperature: 0.7,
+        max_tokens: 2048,
+      });
+      return fallbackCompletion.choices[0]?.message?.content || 'No response from AI.';
+    }
+    throw err;
+  }
 }
 
 // ── Gemini engine (fallback) ───────────────────────────────────────

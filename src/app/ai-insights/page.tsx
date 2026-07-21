@@ -121,7 +121,7 @@ function InsightCard({ widget }: { widget: InsightWidget }) {
               {widget.title}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '1px' }}>
-              Powered by Gemini 2.0 Flash
+              Powered by Groq AI (LLaMA 3.3 70B)
             </div>
           </div>
         </div>
@@ -259,7 +259,7 @@ function AIChat() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} className="animate-pulse" />
-            <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Gemini 2.0 Flash · Full sprint context loaded</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-muted)' }}>Groq LLaMA 3.3 70B · Full sprint context loaded</span>
           </div>
         </div>
       </div>
@@ -466,7 +466,7 @@ export default function AIInsightsPage() {
                   AI Insights
                 </h1>
                 <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)', marginTop: '3px' }}>
-                  Powered by Gemini 2.0 Flash · Full sprint context · Real-time analysis
+                  Powered by Groq AI (LLaMA 3.3 70B) & Gemini · Full sprint context · Real-time analysis
                 </p>
               </div>
             </div>
