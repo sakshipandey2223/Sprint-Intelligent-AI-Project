@@ -1,585 +1,590 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bot, X, Send, Trash2, Sparkles, Terminal, ShieldAlert, 
-  Zap, Cpu, CheckCircle2, Sliders, AlertTriangle, 
-  Activity, Info
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import {
+  Bot, X, Send, Trash2, Sparkles, Terminal, ShieldAlert,
+  Zap, Cpu, Sliders, Activity, ChevronLeft, ChevronRight, Maximize2, Copy, Check, CornerDownLeft
 } from 'lucide-react';
 import { useAppStore, Message } from '@/lib/store';
 import { useMutation } from '@tanstack/react-query';
 
-// A lightweight, highly-robust regex-based markdown renderer in React
-function Markdown({ text }: { text: string }) {
+/* ────────────────────────── Markdown Renderer ───────────────────────── */
+function Markdown({ text, isDark }: { text: string; isDark: boolean }) {
   const lines = text.split('\n');
-  const renderedElements: React.ReactNode[] = [];
+  const elements: React.ReactNode[] = [];
   let tableRows: string[][] = [];
-  let isInTable = false;
-  let isInCode = false;
-  let codeBlockLines: string[] = [];
+  let inTable = false;
+  let inCode = false;
+  let codeLines: string[] = [];
 
-  const renderTextWithFormatting = (str: string) => {
-    // Bold **text**
-    const boldParts = str.split(/\*\*([^*]+)\*\*/g);
-    return boldParts.map((part, index) => {
-      if (index % 2 === 1) {
-        return <strong key={index} style={{ color: 'var(--color-accent, #6366f1)', fontWeight: 700 }}>{part}</strong>;
-      }
-      
-      // Inline code `code`
-      const codeParts = part.split(/`([^`]+)`/g);
-      return codeParts.map((cp, cidx) => {
-        if (cidx % 2 === 1) {
-          return (
-            <code key={cidx} className="px-1.5 py-0.5 rounded text-[11px] font-mono" style={{ background: 'var(--color-markdown-code-bg, rgba(255,255,255,0.06))', color: '#ec4899' }}>
-              {cp}
-            </code>
-          );
-        }
-
-        // Italic *text*
-        const italicParts = cp.split(/\*([^*]+)\*/g);
-        return italicParts.map((ip, i) => {
-          if (i % 2 === 1) {
-            return <em key={i} className="font-sans text-slate-400 italic">{ip}</em>;
-          }
-          return ip;
-        });
+  const fmt = (str: string): React.ReactNode => {
+    const bold = str.split(/\*\*([^*]+)\*\*/g);
+    return bold.map((part, i) => {
+      if (i % 2 === 1) return <strong key={i} style={{ color: '#a78bfa', fontWeight: 700 }}>{part}</strong>;
+      const code = part.split(/`([^`]+)`/g);
+      return code.map((cp, ci) => {
+        if (ci % 2 === 1) return (
+          <code key={ci} style={{
+            background: isDark ? 'rgba(139,92,246,0.12)' : 'rgba(99,102,241,0.08)',
+            color: '#ec4899',
+            padding: '1px 6px',
+            borderRadius: '4px',
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            border: '1px solid rgba(236,72,153,0.2)'
+          }}>{cp}</code>
+        );
+        const it = cp.split(/\*([^*]+)\*/g);
+        return it.map((ip, ii) => ii % 2 === 1
+          ? <em key={ii} style={{ color: isDark ? '#94a3b8' : '#64748b', fontStyle: 'italic' }}>{ip}</em>
+          : ip
+        );
       });
     });
   };
 
   lines.forEach((line, idx) => {
-    const trimmed = line.trim();
-
-    // Code block toggle
-    if (trimmed.startsWith('```')) {
-      if (isInCode) {
-        // End of code block
-        renderedElements.push(
-          <div key={`code-${idx}`} className="my-2 p-3 rounded-lg border border-white/5 bg-black/40 font-mono text-[11px] text-emerald-400 overflow-x-auto">
-            <pre className="m-0 leading-relaxed">{codeBlockLines.join('\n')}</pre>
+    const t = line.trim();
+    if (t.startsWith('```')) {
+      if (inCode) {
+        elements.push(
+          <div key={`code-${idx}`} style={{
+            margin: '10px 0',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            background: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(30,41,59,0.06)',
+            border: `1px solid ${isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}`,
+            fontFamily: 'monospace',
+            fontSize: '11px',
+            color: '#10b981',
+            overflowX: 'auto',
+          }}>
+            <pre style={{ margin: 0, lineHeight: 1.65 }}>{codeLines.join('\n')}</pre>
           </div>
         );
-        codeBlockLines = [];
-        isInCode = false;
-      } else {
-        isInCode = true;
-      }
+        codeLines = []; inCode = false;
+      } else { inCode = true; }
       return;
     }
+    if (inCode) { codeLines.push(line); return; }
 
-    if (isInCode) {
-      codeBlockLines.push(line);
+    if (t.startsWith('|')) {
+      if (t.includes('---')) return;
+      inTable = true;
+      tableRows.push(line.split('|').map(c => c.trim()).filter((_, i, a) => i > 0 && i < a.length - 1));
       return;
-    }
-
-    // Table Detector
-    if (trimmed.startsWith('|')) {
-      if (trimmed.includes('---')) {
-        return;
-      }
-      isInTable = true;
-      const cells = line
-        .split('|')
-        .map(c => c.trim())
-        .filter((_, i, arr) => i > 0 && i < arr.length - 1);
-      tableRows.push(cells);
-      return;
-    } else if (isInTable) {
-      renderedElements.push(
-        <div key={`table-${idx}`} className="my-3 overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--color-card-border)', background: 'rgba(0,0,0,0.1)' }}>
-          <table className="min-w-full divide-y text-left text-[11px]" style={{ divideColor: 'var(--color-card-border)' }}>
+    } else if (inTable) {
+      elements.push(
+        <div key={`tbl-${idx}`} style={{ overflowX: 'auto', margin: '10px 0', borderRadius: '10px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}` }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>
-              <tr style={{ background: 'var(--color-markdown-table-thead-bg, rgba(255,255,255,0.03))' }}>
-                {tableRows[0]?.map((cell, cIdx) => (
-                  <th key={cIdx} className="px-3 py-2 font-semibold" style={{ color: 'var(--color-text-primary)' }}>{cell}</th>
-                ))}
+              <tr style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
+                {tableRows[0]?.map((c, ci) => <th key={ci} style={{ padding: '8px 12px', textAlign: 'left', color: isDark ? '#c4b5fd' : '#6366f1', fontWeight: 700, fontFamily: 'monospace', fontSize: '10px' }}>{c}</th>)}
               </tr>
             </thead>
-            <tbody className="divide-y" style={{ divideColor: 'var(--color-card-border)' }}>
-              {tableRows.slice(1).map((row, rIdx) => (
-                <tr key={rIdx} className="hover:bg-white/5 transition-colors">
-                  {row.map((cell, cIdx) => (
-                    <td key={cIdx} className="px-3 py-1.5 align-top" style={{ color: 'var(--color-text-secondary)' }}>{renderTextWithFormatting(cell)}</td>
-                  ))}
+            <tbody>
+              {tableRows.slice(1).map((row, ri) => (
+                <tr key={ri} style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'}` }}>
+                  {row.map((c, ci) => <td key={ci} style={{ padding: '7px 12px', color: isDark ? '#94a3b8' : '#475569', verticalAlign: 'top', fontSize: '11px' }}>{fmt(c)}</td>)}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       );
-      tableRows = [];
-      isInTable = false;
+      tableRows = []; inTable = false;
     }
 
-    if (trimmed === '') {
-      renderedElements.push(<div key={`br-${idx}`} className="h-1.5" />);
-      return;
-    }
+    if (t === '') { elements.push(<div key={`br-${idx}`} style={{ height: '6px' }} />); return; }
 
-    if (trimmed.startsWith('# ')) {
-      renderedElements.push(
-        <h1 key={idx} className="text-md font-extrabold mt-3 mb-1.5 pb-1 border-b" style={{ color: 'var(--color-text-primary)', borderColor: 'var(--color-card-border)' }}>
-          {renderTextWithFormatting(trimmed.substring(2))}
-        </h1>
+    if (t.startsWith('# '))
+      elements.push(<h1 key={idx} style={{ fontSize: '15px', fontWeight: 800, margin: '14px 0 8px', color: isDark ? '#fff' : '#0f172a', borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`, paddingBottom: '6px' }}>{fmt(t.slice(2))}</h1>);
+    else if (t.startsWith('## '))
+      elements.push(<h2 key={idx} style={{ fontSize: '13px', fontWeight: 700, margin: '12px 0 6px', color: isDark ? '#e2e8f0' : '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ width: '3px', height: '16px', borderRadius: '3px', background: 'linear-gradient(180deg, #6366f1, #a78bfa)', display: 'inline-block', flexShrink: 0 }} />{fmt(t.slice(3))}
+      </h2>);
+    else if (t.startsWith('### '))
+      elements.push(<h3 key={idx} style={{ fontSize: '11px', fontWeight: 700, margin: '10px 0 4px', color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'monospace' }}>
+        <Sparkles style={{ width: '10px', height: '10px' }} />{fmt(t.slice(4))}
+      </h3>);
+    else if (t.startsWith('#### '))
+      elements.push(<h4 key={idx} style={{ fontSize: '10px', fontWeight: 700, margin: '8px 0 3px', color: '#2dd4bf', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{fmt(t.slice(5))}</h4>);
+    else if (t.startsWith('- ') || t.startsWith('* '))
+      elements.push(
+        <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', marginBottom: '5px' }}>
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #2dd4bf)', marginTop: '6px', flexShrink: 0, display: 'inline-block' }} />
+          <span style={{ fontSize: '12px', color: isDark ? '#cbd5e1' : '#334155', lineHeight: 1.6 }}>{fmt(t.slice(2))}</span>
+        </div>
       );
-    } else if (trimmed.startsWith('## ')) {
-      renderedElements.push(
-        <h2 key={idx} className="text-sm font-bold mt-3 mb-1" style={{ color: 'var(--color-text-primary)' }}>
-          {renderTextWithFormatting(trimmed.substring(3))}
-        </h2>
-      );
-    } else if (trimmed.startsWith('### ')) {
-      renderedElements.push(
-        <h3 key={idx} className="text-xs font-semibold text-violet-400 mt-2 mb-1 flex items-center gap-1.5 uppercase tracking-wider font-mono">
-          <Sparkles className="w-3 h-3 text-violet-400" />
-          {renderTextWithFormatting(trimmed.substring(4))}
-        </h3>
-      );
-    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-      renderedElements.push(
-        <li key={idx} className="ml-3 list-disc text-xs mb-0.5 pl-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-          {renderTextWithFormatting(trimmed.substring(2))}
-        </li>
-      );
-    } else if (trimmed.match(/^\d+\.\s/)) {
-      const match = trimmed.match(/^(\d+)\.\s(.*)/);
-      renderedElements.push(
-        <div key={idx} className="ml-3 text-xs mb-0.5 flex gap-1.5">
-          <span className="font-mono text-cyan-500 font-bold">{match?.[1]}.</span>
-          <span style={{ color: 'var(--color-text-secondary)' }}>{renderTextWithFormatting(match?.[2] || '')}</span>
+    else if (t.match(/^\d+\.\s/)) {
+      const m = t.match(/^(\d+)\.\s(.*)/);
+      elements.push(
+        <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
+          <span style={{ fontFamily: 'monospace', color: '#6366f1', fontWeight: 800, fontSize: '12px', minWidth: '18px', flexShrink: 0 }}>{m?.[1]}.</span>
+          <span style={{ fontSize: '12px', color: isDark ? '#cbd5e1' : '#334155', lineHeight: 1.6 }}>{fmt(m?.[2] || '')}</span>
         </div>
       );
     } else {
-      renderedElements.push(
-        <p key={idx} className="text-xs leading-relaxed mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-          {renderTextWithFormatting(line)}
-        </p>
-      );
+      elements.push(<p key={idx} style={{ fontSize: '12px', color: isDark ? '#94a3b8' : '#475569', lineHeight: 1.7, marginBottom: '5px' }}>{fmt(line)}</p>);
     }
   });
-
-  // Flush table if message ends with table
-  if (isInTable && tableRows.length > 0) {
-    renderedElements.push(
-      <div key="table-end" className="my-3 overflow-x-auto rounded-lg border" style={{ borderColor: 'var(--color-card-border)', background: 'rgba(0,0,0,0.1)' }}>
-        <table className="min-w-full divide-y text-left text-[11px]" style={{ divideColor: 'var(--color-card-border)' }}>
-          <thead>
-            <tr style={{ background: 'var(--color-markdown-table-thead-bg, rgba(255,255,255,0.03))' }}>
-              {tableRows[0]?.map((cell, cIdx) => (
-                <th key={cIdx} className="px-3 py-2 font-semibold" style={{ color: 'var(--color-text-primary)' }}>{cell}</th>
-              ))}
+  if (inTable && tableRows.length > 0) {
+    elements.push(
+      <div key="tbl-end" style={{ overflowX: 'auto', margin: '10px 0', borderRadius: '10px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}` }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+          <thead><tr style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
+            {tableRows[0]?.map((c, ci) => <th key={ci} style={{ padding: '8px 12px', textAlign: 'left', color: isDark ? '#c4b5fd' : '#6366f1', fontWeight: 700, fontFamily: 'monospace' }}>{c}</th>)}
+          </tr></thead>
+          <tbody>{tableRows.slice(1).map((row, ri) => (
+            <tr key={ri} style={{ borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'}` }}>
+              {row.map((c, ci) => <td key={ci} style={{ padding: '7px 12px', color: isDark ? '#94a3b8' : '#475569' }}>{fmt(c)}</td>)}
             </tr>
-          </thead>
-          <tbody className="divide-y" style={{ divideColor: 'var(--color-card-border)' }}>
-            {tableRows.slice(1).map((row, rIdx) => (
-              <tr key={rIdx} className="hover:bg-white/5 transition-colors">
-                {row.map((cell, cIdx) => (
-                  <td key={cIdx} className="px-3 py-1.5 align-top" style={{ color: 'var(--color-text-secondary)' }}>{renderTextWithFormatting(cell)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
+          ))}</tbody>
         </table>
       </div>
     );
   }
-
-  return <div className="space-y-1">{renderedElements}</div>;
+  return <div style={{ lineHeight: 1.65 }}>{elements}</div>;
 }
 
+/* ─────────────────────────── Constants ──────────────────────────────── */
 const PERSONAS = [
-  { 
-    id: 'scrum', 
-    name: 'Scrum Master', 
-    desc: 'Flow & Velocity Coach', 
-    icon: Bot, 
-    color: '#2dd4a7', 
-    promptSuffix: '\nFormat your response as an expert Agile Coach/Scrum Master. Prioritize workflow velocity, team efficiency, and removing delivery blockers.' 
-  },
-  { 
-    id: 'risk', 
-    name: 'Risk Analyst', 
-    desc: 'Capacity & Impediments', 
-    icon: ShieldAlert, 
-    color: '#ef4444', 
-    promptSuffix: '\nFormat your response as a Senior Project Delivery Risk Analyst. Prioritize highlighting capacity overflow, delivery confidence, and critical blockers.' 
-  },
-  { 
-    id: 'devops', 
-    name: 'DevOps Engine', 
-    desc: 'Telemetry & Infrastructure', 
-    icon: Terminal, 
-    color: '#6366f1', 
-    promptSuffix: '\nFormat your response as a DevOps Platform Engineer. Focus on continuous deployment, container telemetry, and cloud systems.' 
-  }
+  { id: 'scrum', name: 'Scrum Master', icon: Bot, color: '#2dd4a7', suffix: '\nRespond as an expert Agile Scrum Master. Focus on sprint velocity, team flow, and removing blockers.' },
+  { id: 'risk', name: 'Risk Analyst', icon: ShieldAlert, color: '#f43f5e', suffix: '\nRespond as a Senior Risk Analyst. Focus on blockers, delivery confidence, and capacity overflow risks.' },
+  { id: 'devops', name: 'DevOps', icon: Terminal, color: '#6366f1', suffix: '\nRespond as a DevOps Engineer. Focus on infrastructure telemetry, CI/CD health, and deployments.' },
+] as const;
+
+const QUICK_CMDS = [
+  { cmd: '/summary', label: 'Executive Summary', icon: Sparkles, q: 'Generate a comprehensive executive sprint summary report for stakeholders with key metrics and recommendations.' },
+  { cmd: '/blockers', label: 'Blocker Analysis', icon: ShieldAlert, q: 'Analyze all current sprint blockers in detail and provide remediation paths for each one.' },
+  { cmd: '/predict', label: 'Sprint Forecast', icon: Zap, q: 'Forecast sprint completion probability based on current velocity and remaining capacity.' },
+  { cmd: '/workload', label: 'Capacity Audit', icon: Cpu, q: 'Audit developer workloads and identify overloaded team members with suggested rebalancing.' },
 ];
 
-const QUICK_COMMANDS = [
-  { cmd: '/summary', label: 'Executive Summary', icon: Bot, query: 'Generate an executive summary report for the current active sprint.' },
-  { cmd: '/blockers', label: 'Analyze Blockers', icon: ShieldAlert, query: 'What is blocking the current sprint? Provide blocker details and suggested fixes.' },
-  { cmd: '/predict', label: 'Sprint Forecast', icon: Zap, query: 'Analyze current velocity and capacity to forecast whether we will complete all story points.' },
-  { cmd: '/workload', label: 'Developer Workload', icon: Cpu, query: 'Which developers are overloaded and who has extra capacity to assist?' },
-];
+const MIN_WIDTH = 420;
+const MAX_WIDTH = 820;
+const DEFAULT_WIDTH = 520;
 
+/* ─────────────────────────── Main Component ─────────────────────────── */
 export default function CopilotDrawer() {
   const { isCopilotOpen, toggleCopilot, copilotMessages, addCopilotMessage, clearCopilotHistory, theme } = useAppStore();
+  const isDark = theme === 'dark';
+
   const [inputValue, setInputValue] = useState('');
-  const [activePersona, setActivePersona] = useState<'scrum' | 'risk' | 'devops'>('scrum');
+  const [persona, setPersona] = useState<'scrum' | 'risk' | 'devops'>('scrum');
   const [showConfig, setShowConfig] = useState(false);
-  const [aiSensitivity, setAiSensitivity] = useState(75);
-  const [aiTemperature, setAiTemperature] = useState(0.7);
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [showSlash, setShowSlash] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH);
+  const [isResizing, setIsResizing] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const isDark = theme === 'dark';
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
 
-  // Auto-scroll to bottom of chat
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const activePersona = PERSONAS.find(p => p.id === persona)!;
 
+  /* ── Auto-scroll ── */
   useEffect(() => {
-    if (isCopilotOpen) {
-      setTimeout(scrollToBottom, 100);
-    }
+    if (isCopilotOpen) setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 80);
   }, [isCopilotOpen, copilotMessages]);
 
-  // Background network animation loop
+  /* ── Canvas neural net background ── */
   useEffect(() => {
     if (!isCopilotOpen) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    let animationFrameId: number;
-    let width = (canvas.width = canvas.offsetWidth);
-    let height = (canvas.height = canvas.offsetHeight);
-
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = canvas.offsetWidth;
-      height = canvas.height = canvas.offsetHeight;
-    };
-    window.addEventListener('resize', handleResize);
-
-    const pointsCount = 30;
-    const points: Array<{ x: number; y: number; vx: number; vy: number; radius: number }> = [];
-    for (let i = 0; i < pointsCount; i++) {
-      points.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        radius: Math.random() * 2 + 1,
-      });
-    }
-
+    let raf: number;
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const W = canvas.width, H = canvas.height;
+    const COUNT = 35;
+    const pts = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 2.5 + 1,
+    }));
     const draw = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      // Dynamic stroke coloring based on light/dark mode
-      const dotColor = isDark ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)';
-      const lineColor = isDark ? 'rgba(45, 212, 167, 0.05)' : 'rgba(26, 115, 232, 0.05)';
-
-      for (let i = 0; i < pointsCount; i++) {
-        const p1 = points[i];
-        p1.x += p1.vx;
-        p1.y += p1.vy;
-
-        if (p1.x < 0 || p1.x > width) p1.vx *= -1;
-        if (p1.y < 0 || p1.y > height) p1.vy *= -1;
-
+      ctx.clearRect(0, 0, W, H);
+      const dotAlpha = isDark ? 0.22 : 0.12;
+      const lineAlpha = isDark ? 0.06 : 0.04;
+      pts.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0 || p.x > W) p.vx *= -1;
+        if (p.y < 0 || p.y > H) p.vy *= -1;
         ctx.beginPath();
-        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
-        ctx.fillStyle = dotColor;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = isDark ? `rgba(99,102,241,${dotAlpha})` : `rgba(26,115,232,${dotAlpha})`;
         ctx.fill();
-
-        for (let j = i + 1; j < pointsCount; j++) {
-          const p2 = points[j];
-          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-          if (dist < 110) {
+        pts.forEach(p2 => {
+          const d = Math.hypot(p.x - p2.x, p.y - p2.y);
+          if (d < 120) {
             ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = lineColor;
-            ctx.lineWidth = (1 - dist / 110) * 0.8;
+            ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = isDark ? `rgba(45,212,167,${lineAlpha * (1 - d / 120)})` : `rgba(99,102,241,${lineAlpha * (1 - d / 120)})`;
+            ctx.lineWidth = 0.7;
             ctx.stroke();
           }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(draw);
+        });
+      });
+      raf = requestAnimationFrame(draw);
     };
-
     draw();
+    return () => cancelAnimationFrame(raf);
+  }, [isDark, isCopilotOpen, panelWidth]);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animationFrameId);
+  /* ── Drag to resize ── */
+  const onResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartX.current = e.clientX;
+    resizeStartW.current = panelWidth;
+    setIsResizing(true);
+    const onMove = (ev: MouseEvent) => {
+      const delta = resizeStartX.current - ev.clientX;
+      setPanelWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, resizeStartW.current + delta)));
     };
-  }, [isDark, isCopilotOpen]);
+    const onUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [panelWidth]);
 
-  // Build Gemini-compatible chat history from messages in state
-  const buildHistory = () => {
-    const msgs = copilotMessages.filter(m => m.text !== copilotMessages[0]?.text); // skip welcome
-    return msgs.map((m: Message) => ({
+  /* ── Build history ── */
+  const buildHistory = () =>
+    copilotMessages.slice(1).map((m: Message) => ({
       role: m.sender === 'user' ? 'user' as const : 'model' as const,
       parts: [{ text: m.text }],
     }));
-  };
 
-  // AI API Call Mutation
-  const copilotMutation = useMutation({
-    mutationFn: async (queryText: string) => {
-      const history = buildHistory();
+  /* ── Mutation ── */
+  const mutation = useMutation({
+    mutationFn: async (q: string) => {
       const res = await fetch('/api/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          query: queryText, 
-          history,
-          sensitivity: aiSensitivity,
-          temperature: aiTemperature
-        }),
+        body: JSON.stringify({ query: q, history: buildHistory() }),
       });
       if (!res.ok) throw new Error('API failure');
       return res.json();
     },
-    onSuccess: (data) => {
-      addCopilotMessage('bot', data.answer);
-    },
-    onError: () => {
-      addCopilotMessage('bot', `🔴 **AI Error**: Failed to reach telemetry engine. Please check system configurations and try again.`);
-    },
+    onSuccess: (data) => addCopilotMessage('bot', data.answer),
+    onError: () => addCopilotMessage('bot', `🔴 **Connection Error**: Failed to reach AI engine. Please try again.`),
   });
 
-  const handleSendMessage = (text: string) => {
-    if (!text.trim() || copilotMutation.isPending) return;
-
-    // Append persona instructions for specialized model feedback
-    const persona = PERSONAS.find(p => p.id === activePersona);
-    const formattedText = text.trim();
-    const queryForApi = formattedText + (persona ? persona.promptSuffix : '');
-
-    // Add user message to UI state (without the system suffix to keep chat clean)
-    addCopilotMessage('user', formattedText);
+  const sendMessage = (text: string) => {
+    if (!text.trim() || mutation.isPending) return;
+    addCopilotMessage('user', text.trim());
     setInputValue('');
-    setShowSlashMenu(false);
-
-    // Trigger AI API call
-    copilotMutation.mutate(queryForApi);
+    setShowSlash(false);
+    mutation.mutate(text.trim() + activePersona.suffix);
+    if (inputRef.current) inputRef.current.style.height = '44px';
   };
 
-  const handleInputChange = (val: string) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(inputValue); }
+    if (e.key === 'Escape') { setShowSlash(false); }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
     setInputValue(val);
-    if (val.startsWith('/')) {
-      setShowSlashMenu(true);
-    } else {
-      setShowSlashMenu(false);
-    }
+    setShowSlash(val.startsWith('/'));
+    // Auto grow
+    const ta = e.target;
+    ta.style.height = '44px';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
   };
 
-  const currentPersonaInfo = PERSONAS.find(p => p.id === activePersona) || PERSONAS[0];
+  const copyMessage = (id: string, text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(id);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
 
+  /* ──────────────────── Render ──────────────────── */
   return (
     <AnimatePresence>
       {isCopilotOpen && (
         <>
-          {/* Backdrop Blur overlay */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => toggleCopilot(false)}
-            className="fixed inset-0 bg-black/45 backdrop-blur-sm z-45"
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)', zIndex: 45 }}
           />
 
-          {/* Chat Container Drawer */}
+          {/* Panel */}
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-            className={`fixed top-0 right-0 w-[500px] max-w-full h-screen border-l flex flex-col z-50 shadow-2xl transition-colors duration-300 ${
-              isDark 
-                ? 'bg-slate-950/90 border-white/10 text-slate-100' 
-                : 'bg-white/95 border-slate-200 text-slate-800'
-            }`}
-            style={{ backdropFilter: 'blur(20px)' }}
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+            style={{
+              position: 'fixed', top: 0, right: 0,
+              width: `${panelWidth}px`,
+              height: '100vh',
+              display: 'flex', flexDirection: 'column',
+              zIndex: 50,
+              background: isDark
+                ? 'linear-gradient(180deg, rgba(7,11,22,0.97) 0%, rgba(10,15,30,0.97) 100%)'
+                : 'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.98) 100%)',
+              borderLeft: `1px solid ${isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.12)'}`,
+              boxShadow: isDark ? '-20px 0 60px rgba(0,0,0,0.5)' : '-20px 0 60px rgba(0,0,0,0.08)',
+              backdropFilter: 'blur(24px)',
+              cursor: isResizing ? 'col-resize' : 'default',
+            }}
           >
-            {/* Live Interactive Background Canvas */}
-            <canvas 
-              ref={canvasRef} 
-              className="absolute inset-0 w-full h-full pointer-events-none opacity-40" 
-              style={{ zIndex: 0 }}
-            />
+            {/* Live Canvas Background */}
+            <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: isDark ? 0.6 : 0.35 }} />
 
-            {/* Header HUD panel */}
-            <div className="p-4 border-b flex flex-col gap-3 relative z-10" style={{ borderColor: 'var(--color-card-border)' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div 
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 animate-float-slow"
-                    style={{ 
-                      background: `${currentPersonaInfo.color}20`, 
-                      border: `1px solid ${currentPersonaInfo.color}40`,
-                      boxShadow: `0 0 15px ${currentPersonaInfo.color}25`
+            {/* Drag Resize Handle */}
+            <div
+              onMouseDown={onResizeStart}
+              title="Drag to resize panel"
+              style={{
+                position: 'absolute', left: -3, top: 0, width: '6px', height: '100%',
+                cursor: 'col-resize', zIndex: 60,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <div style={{
+                width: '2px', height: '48px', borderRadius: '2px',
+                background: isResizing ? '#6366f1' : (isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.2)'),
+                transition: 'background 0.2s, width 0.2s',
+              }} />
+            </div>
+
+            {/* ─── Header ─── */}
+            <div style={{
+              padding: '16px 20px 12px',
+              borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
+              position: 'relative', zIndex: 10, flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                {/* Left: brand */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <motion.div
+                    animate={{ boxShadow: ['0 0 12px rgba(99,102,241,0.2)', '0 0 22px rgba(45,212,167,0.3)', '0 0 12px rgba(99,102,241,0.2)'] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    style={{
+                      width: '38px', height: '38px', borderRadius: '12px', flexShrink: 0,
+                      background: `linear-gradient(135deg, ${activePersona.color}25, rgba(99,102,241,0.15))`,
+                      border: `1px solid ${activePersona.color}40`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <Bot className="w-5 h-5 animate-pulse" style={{ color: currentPersonaInfo.color }} />
-                  </div>
+                    <Bot style={{ width: '18px', height: '18px', color: activePersona.color }} />
+                  </motion.div>
                   <div>
-                    <h3 className="font-bold text-sm flex items-center gap-1.5" style={{ color: 'var(--color-text-primary)' }}>
-                      Sprint Copilot
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">v2.1</span>
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                        <span className="text-[9px] font-mono" style={{ color: 'var(--color-text-muted)' }}>HUD Live</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: isDark ? '#fff' : '#0f172a', letterSpacing: '-0.01em' }}>Sprint Copilot</span>
+                      <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: '#2dd4bf', background: 'rgba(45,212,167,0.1)', border: '1px solid rgba(45,212,167,0.25)', padding: '1px 7px', borderRadius: '99px', letterSpacing: '0.06em' }}>v2.1</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <motion.span
+                          animate={{ scale: [1, 1.4, 1], opacity: [1, 0.6, 1] }}
+                          transition={{ duration: 1.5, repeat: Infinity }}
+                          style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}
+                        />
+                        <span style={{ fontSize: '9px', fontFamily: 'monospace', color: isDark ? '#64748b' : '#94a3b8' }}>ONLINE</span>
                       </div>
-                      <span className="text-[9px] font-mono text-slate-500">•</span>
-                      <span className="text-[9px] font-mono" style={{ color: 'var(--color-text-muted)' }}>Model: Groq LLaMA 3.3</span>
+                      <span style={{ fontSize: '9px', color: isDark ? '#334155' : '#cbd5e1' }}>•</span>
+                      <span style={{ fontSize: '9px', fontFamily: 'monospace', color: isDark ? '#64748b' : '#94a3b8' }}>Groq LLaMA-3.3-70B</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                {/* Right: actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <button
-                    onClick={() => setShowConfig(!showConfig)}
-                    title="AI Engine Parameters"
-                    className="p-2 hover:bg-white/5 rounded-xl transition-all"
-                    style={{ color: showConfig ? 'var(--color-accent)' : 'var(--color-text-muted)' }}
-                  >
-                    <Sliders className="w-4 h-4" />
-                  </button>
+                    onClick={() => setShowConfig(v => !v)}
+                    title="AI Parameters"
+                    style={{
+                      width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer',
+                      background: showConfig ? 'rgba(99,102,241,0.15)' : 'transparent',
+                      border: `1px solid ${showConfig ? 'rgba(99,102,241,0.4)' : 'transparent'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: showConfig ? '#a78bfa' : (isDark ? '#475569' : '#94a3b8'),
+                      transition: 'all 0.2s',
+                    }}
+                  ><Sliders style={{ width: '13px', height: '13px' }} /></button>
                   <button
                     onClick={clearCopilotHistory}
-                    title="Wipe conversation logs"
-                    className="p-2 hover:bg-white/5 rounded-xl transition"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <Trash2 className="w-4 h-4 hover:text-red-400 transition-colors" />
-                  </button>
+                    title="Clear chat"
+                    style={{
+                      width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer',
+                      background: 'transparent', border: '1px solid transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: isDark ? '#475569' : '#94a3b8', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#f43f5e'; e.currentTarget.style.background = 'rgba(244,63,94,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = isDark ? '#475569' : '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
+                  ><Trash2 style={{ width: '13px', height: '13px' }} /></button>
                   <button
                     onClick={() => toggleCopilot(false)}
-                    className="p-2 hover:bg-white/5 rounded-xl transition"
-                    style={{ color: 'var(--color-text-muted)' }}
-                  >
-                    <X className="w-4 h-4 hover:text-white transition-colors" />
-                  </button>
+                    style={{
+                      width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer',
+                      background: 'transparent', border: '1px solid transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: isDark ? '#475569' : '#94a3b8', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = isDark ? '#fff' : '#0f172a'; e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = isDark ? '#475569' : '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
+                  ><X style={{ width: '14px', height: '14px' }} /></button>
                 </div>
               </div>
 
-              {/* Collapsible Sliders Settings */}
+              {/* Collapsible Config */}
               <AnimatePresence>
                 {showConfig && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden rounded-xl p-3 text-[11px] border"
-                    style={{ 
-                      background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
-                      borderColor: 'var(--color-card-border)'
-                    }}
+                    transition={{ duration: 0.25 }}
+                    style={{ overflow: 'hidden', marginBottom: '10px' }}
                   >
-                    <h4 className="font-semibold mb-2.5 flex items-center gap-1.5" style={{ color: 'var(--color-text-primary)' }}>
-                      <Activity className="w-3.5 h-3.5 text-violet-400" />
-                      AI Core Parameters Control
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span style={{ color: 'var(--color-text-secondary)' }}>Risk Sensitivity Rate</span>
-                          <span className="font-mono text-violet-400">{aiSensitivity}%</span>
-                        </div>
-                        <input 
-                          type="range" min="10" max="100" 
-                          value={aiSensitivity} 
-                          onChange={(e) => setAiSensitivity(Number(e.target.value))}
-                          className="w-full accent-violet-500 h-1 rounded" 
-                        />
+                    <div style={{
+                      padding: '12px 14px', borderRadius: '12px',
+                      background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(99,102,241,0.03)',
+                      border: `1px solid ${isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.1)'}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                        <Activity style={{ width: '12px', height: '12px', color: '#a78bfa' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: isDark ? '#c4b5fd' : '#6366f1', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Parameters</span>
                       </div>
-                      <div>
-                        <div className="flex justify-between mb-1">
-                          <span style={{ color: 'var(--color-text-secondary)' }}>Temperature (Creativity)</span>
-                          <span className="font-mono text-cyan-400">{aiTemperature}</span>
+                      {[
+                        { label: 'Panel Width', unit: 'px', min: MIN_WIDTH, max: MAX_WIDTH, step: 10, val: panelWidth, color: '#6366f1', set: setPanelWidth },
+                      ].map(cfg => (
+                        <div key={cfg.label} style={{ marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '10px', color: isDark ? '#94a3b8' : '#64748b' }}>{cfg.label}</span>
+                            <span style={{ fontSize: '10px', fontFamily: 'monospace', color: cfg.color, fontWeight: 700 }}>{cfg.val}{cfg.unit}</span>
+                          </div>
+                          <input type="range" min={cfg.min} max={cfg.max} step={cfg.step} value={cfg.val}
+                            onChange={e => cfg.set(Number(e.target.value))}
+                            style={{ width: '100%', accentColor: cfg.color }} />
                         </div>
-                        <input 
-                          type="range" min="0.1" max="1.0" step="0.1" 
-                          value={aiTemperature} 
-                          onChange={(e) => setAiTemperature(Number(e.target.value))}
-                          className="w-full accent-cyan-500 h-1 rounded" 
-                        />
-                      </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Persona Switcher Tabs */}
-              <div className="grid grid-cols-3 gap-1 p-1 rounded-xl" style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
+              {/* Persona Tabs */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', padding: '4px',
+                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)',
+                borderRadius: '12px',
+              }}>
                 {PERSONAS.map(p => {
                   const Icon = p.icon;
-                  const isActive = activePersona === p.id;
+                  const active = persona === p.id;
                   return (
-                    <button
-                      key={p.id}
-                      onClick={() => setActivePersona(p.id as any)}
-                      className="py-1.5 px-2 rounded-lg text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                    <button key={p.id}
+                      onClick={() => setPersona(p.id as any)}
                       style={{
-                        background: isActive ? (isDark ? 'rgba(255,255,255,0.08)' : '#ffffff') : 'transparent',
-                        boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
-                        color: isActive ? 'var(--color-text-primary)' : 'var(--color-text-muted)'
+                        padding: '7px 6px', borderRadius: '9px', cursor: 'pointer',
+                        background: active ? (isDark ? 'rgba(255,255,255,0.07)' : '#fff') : 'transparent',
+                        border: `1px solid ${active ? p.color + '40' : 'transparent'}`,
+                        boxShadow: active ? `0 2px 8px ${p.color}18` : 'none',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+                        transition: 'all 0.2s',
                       }}
                     >
-                      <Icon className="w-3.5 h-3.5" style={{ color: isActive ? p.color : 'var(--color-text-muted)' }} />
-                      {p.name}
+                      <Icon style={{ width: '13px', height: '13px', color: active ? p.color : (isDark ? '#475569' : '#94a3b8') }} />
+                      <span style={{ fontSize: '9px', fontWeight: 700, color: active ? (isDark ? '#e2e8f0' : '#1e293b') : (isDark ? '#475569' : '#94a3b8'), letterSpacing: '0.03em' }}>{p.name}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Conversation Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
+            {/* ─── Messages ─── */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', zIndex: 10 }}>
               <AnimatePresence initial={false}>
                 {copilotMessages.map((msg: Message) => {
                   const isUser = msg.sender === 'user';
                   return (
                     <motion.div
                       key={msg.id}
-                      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                      initial={{ opacity: 0, y: 14, scale: 0.97 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.25 }}
-                      className={`flex flex-col max-w-[85%] ${isUser ? 'ml-auto items-end' : 'mr-auto items-start'}`}
+                      transition={{ type: 'spring', damping: 22, stiffness: 200 }}
+                      style={{
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: isUser ? 'flex-end' : 'flex-start',
+                        maxWidth: isUser ? '80%' : '95%',
+                        alignSelf: isUser ? 'flex-end' : 'flex-start',
+                      }}
                     >
-                      <span className="text-[9px] font-mono mb-1 px-1" style={{ color: 'var(--color-text-faint)' }}>
-                        {isUser ? 'You' : 'Sprint AI'} • {msg.timestamp}
-                      </span>
+                      {/* Sender label */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px', paddingLeft: isUser ? 0 : '2px', paddingRight: isUser ? '2px' : 0 }}>
+                        {!isUser && (
+                          <div style={{ width: '18px', height: '18px', borderRadius: '6px', background: `${activePersona.color}18`, border: `1px solid ${activePersona.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Bot style={{ width: '10px', height: '10px', color: activePersona.color }} />
+                          </div>
+                        )}
+                        <span style={{ fontSize: '9px', fontFamily: 'monospace', color: isDark ? '#334155' : '#94a3b8' }}>
+                          {isUser ? 'You' : 'Sprint AI'} · {msg.timestamp}
+                        </span>
+                      </div>
 
-                      <div
-                        className="rounded-2xl px-4 py-3 text-xs leading-relaxed transition-all shadow-md"
-                        style={{
-                          background: isUser 
-                            ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' 
+                      {/* Bubble */}
+                      <div style={{ position: 'relative' }} className="group">
+                        <div style={{
+                          padding: isUser ? '10px 16px' : '14px 18px',
+                          borderRadius: isUser ? '18px 18px 4px 18px' : '4px 18px 18px 18px',
+                          background: isUser
+                            ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 60%, #7c3aed 100%)'
                             : (isDark ? 'rgba(255,255,255,0.04)' : '#ffffff'),
-                          border: isUser ? 'none' : '1px solid var(--color-card-border)',
-                          color: isUser ? '#ffffff' : 'var(--color-text-secondary)',
-                          boxShadow: isUser ? '0 4px 15px rgba(99, 102, 241, 0.2)' : '0 2px 8px rgba(0,0,0,0.03)'
-                        }}
-                      >
-                        {isUser ? (
-                          <p className="whitespace-pre-line font-medium">{msg.text}</p>
-                        ) : (
-                          <Markdown text={msg.text} />
+                          border: isUser ? 'none' : `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+                          boxShadow: isUser
+                            ? '0 4px 20px rgba(99,102,241,0.3)'
+                            : isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)',
+                          color: isUser ? '#fff' : (isDark ? '#cbd5e1' : '#334155'),
+                        }}>
+                          {isUser
+                            ? <p style={{ fontSize: '13px', lineHeight: 1.6, margin: 0, fontWeight: 500, whiteSpace: 'pre-line' }}>{msg.text}</p>
+                            : <Markdown text={msg.text} isDark={isDark} />
+                          }
+                        </div>
+
+                        {/* Copy button on hover */}
+                        {!isUser && (
+                          <button
+                            onClick={() => copyMessage(msg.id, msg.text)}
+                            style={{
+                              position: 'absolute', top: '8px', right: '-30px',
+                              width: '24px', height: '24px', borderRadius: '6px',
+                              background: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.05)',
+                              border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.07)'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s',
+                              color: isDark ? '#64748b' : '#94a3b8',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                            title="Copy message"
+                          >
+                            {copied === msg.id
+                              ? <Check style={{ width: '11px', height: '11px', color: '#22c55e' }} />
+                              : <Copy style={{ width: '11px', height: '11px' }} />
+                            }
+                          </button>
                         )}
                       </div>
                     </motion.div>
@@ -587,32 +592,40 @@ export default function CopilotDrawer() {
                 })}
               </AnimatePresence>
 
-              {/* Typing / Thinking indicator */}
-              {copilotMutation.isPending && (
-                <motion.div 
+              {/* Thinking indicator */}
+              {mutation.isPending && (
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-start max-w-[90%] mr-auto"
+                  exit={{ opacity: 0 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', alignSelf: 'flex-start' }}
                 >
-                  <span className="text-[9px] font-mono mb-1.5" style={{ color: 'var(--color-text-faint)' }}>
-                    AI Telemetry Core Processing...
-                  </span>
-                  <div className="border rounded-2xl px-4 py-3 flex flex-col gap-2 relative overflow-hidden w-64 shadow-sm"
-                    style={{
-                      background: isDark ? 'rgba(255,255,255,0.03)' : '#ffffff',
-                      borderColor: 'var(--color-card-border)'
-                    }}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-4 h-4 rounded-full border-2 border-t-violet-500 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
-                      <span className="text-[10px] font-mono animate-pulse" style={{ color: 'var(--color-text-muted)' }}>Running calculations...</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '6px', background: `${activePersona.color}18`, border: `1px solid ${activePersona.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Bot style={{ width: '10px', height: '10px', color: activePersona.color }} />
                     </div>
-                    <div className="w-full h-1 rounded-full overflow-hidden relative" style={{ background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}>
-                      <motion.div 
-                        className="absolute left-0 top-0 h-full bg-gradient-to-r from-violet-600 to-indigo-500"
-                        initial={{ width: '0%' }}
-                        animate={{ width: ['0%', '30%', '55%', '80%', '95%', '98%'] }}
-                        transition={{ duration: 10, ease: 'easeOut' }}
+                    <span style={{ fontSize: '9px', fontFamily: 'monospace', color: isDark ? '#334155' : '#94a3b8' }}>Sprint AI · Processing...</span>
+                  </div>
+                  <div style={{
+                    padding: '14px 18px', borderRadius: '4px 18px 18px 18px',
+                    background: isDark ? 'rgba(255,255,255,0.04)' : '#fff',
+                    border: `1px solid ${isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)'}`,
+                    boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 12px rgba(0,0,0,0.06)',
+                    minWidth: '180px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        style={{ width: '14px', height: '14px', borderRadius: '50%', border: '2px solid transparent', borderTopColor: '#6366f1', borderRightColor: '#2dd4bf', flexShrink: 0 }}
+                      />
+                      <span style={{ fontSize: '11px', fontFamily: 'monospace', color: isDark ? '#475569' : '#94a3b8' }}>Analyzing telemetry...</span>
+                    </div>
+                    <div style={{ width: '100%', height: '3px', borderRadius: '3px', background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                      <motion.div
+                        style={{ height: '100%', background: 'linear-gradient(90deg, #6366f1, #2dd4bf)', borderRadius: '3px' }}
+                        animate={{ width: ['2%', '35%', '62%', '80%', '94%'] }}
+                        transition={{ duration: 12, ease: 'easeOut' }}
                       />
                     </div>
                   </div>
@@ -622,35 +635,89 @@ export default function CopilotDrawer() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Collapsible Slash Commands Panel */}
+            {/* ─── Quick Suggestions (shown only on welcome state) ─── */}
+            {copilotMessages.length === 1 && !mutation.isPending && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  padding: '0 20px 12px',
+                  position: 'relative', zIndex: 10,
+                }}
+              >
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles style={{ width: '10px', height: '10px', color: '#a78bfa' }} />
+                  <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#334155' : '#94a3b8' }}>Quick Directives</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {QUICK_CMDS.map((qc, i) => {
+                    const Icon = qc.icon;
+                    return (
+                      <motion.button
+                        key={qc.cmd}
+                        whileHover={{ scale: 1.02, y: -1 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => sendMessage(qc.q)}
+                        disabled={mutation.isPending}
+                        style={{
+                          padding: '10px 12px', borderRadius: '12px', cursor: 'pointer', textAlign: 'left',
+                          background: isDark ? 'rgba(255,255,255,0.03)' : '#fff',
+                          border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.07)'}`,
+                          boxShadow: isDark ? 'none' : '0 1px 4px rgba(0,0,0,0.04)',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <Icon style={{ width: '11px', height: '11px', color: '#6366f1' }} />
+                          <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', letterSpacing: '0.05em' }}>{qc.cmd}</span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: isDark ? '#64748b' : '#64748b', lineHeight: 1.4, display: 'block' }}>{qc.label}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Slash command menu */}
             <AnimatePresence>
-              {showSlashMenu && (
+              {showSlash && (
                 <motion.div
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 15 }}
-                  className="mx-4 my-2 p-2 rounded-xl border flex flex-col gap-1 shadow-lg relative z-20"
+                  exit={{ opacity: 0, y: 10 }}
                   style={{
-                    background: isDark ? 'rgba(15,23,42,0.95)' : '#ffffff',
-                    borderColor: 'var(--color-card-border)'
+                    margin: '0 12px 8px',
+                    padding: '6px',
+                    borderRadius: '14px',
+                    background: isDark ? 'rgba(7,11,22,0.98)' : '#fff',
+                    border: `1px solid ${isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}`,
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+                    zIndex: 20, position: 'relative',
                   }}
                 >
-                  <span className="text-[9px] font-bold uppercase tracking-wider font-mono p-1" style={{ color: 'var(--color-text-faint)' }}>
-                    Quick Commands
-                  </span>
-                  {QUICK_COMMANDS.map((qc) => {
-                    const CmdIcon = qc.icon;
+                  <div style={{ padding: '4px 8px 6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: isDark ? '#334155' : '#94a3b8' }}>Commands</span>
+                  </div>
+                  {QUICK_CMDS.map(qc => {
+                    const Icon = qc.icon;
                     return (
-                      <button
-                        key={qc.cmd}
-                        onClick={() => handleSendMessage(qc.query)}
-                        className="flex items-center justify-between p-2 rounded-lg text-left hover:bg-violet-600/10 hover:text-violet-400 transition group cursor-pointer text-xs"
+                      <button key={qc.cmd}
+                        onClick={() => sendMessage(qc.q)}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '8px 10px', borderRadius: '9px', cursor: 'pointer',
+                          background: 'transparent', border: 'none', textAlign: 'left', transition: 'background 0.15s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
-                        <div className="flex items-center gap-2">
-                          <CmdIcon className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-400" />
-                          <span className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{qc.label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Icon style={{ width: '13px', height: '13px', color: '#6366f1' }} />
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>{qc.label}</span>
                         </div>
-                        <span className="font-mono text-[10px] text-violet-400 font-bold bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">{qc.cmd}</span>
+                        <span style={{ fontSize: '9px', fontFamily: 'monospace', color: '#a78bfa', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '2px 7px', borderRadius: '6px', fontWeight: 700 }}>{qc.cmd}</span>
                       </button>
                     );
                   })}
@@ -658,92 +725,109 @@ export default function CopilotDrawer() {
               )}
             </AnimatePresence>
 
-            {/* Quick Suggestions Cards Grid */}
-            {!showSlashMenu && copilotMessages.length === 1 && (
-              <div className="p-4 border-t relative z-10" style={{ borderColor: 'var(--color-card-border)' }}>
-                <span className="text-[9px] font-bold uppercase tracking-wider font-mono block mb-2" style={{ color: 'var(--color-text-faint)' }}>
-                  Suggested queries
+            {/* ─── Input Area ─── */}
+            <div style={{
+              padding: '12px 16px 20px',
+              borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}`,
+              background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(248,250,252,0.9)',
+              position: 'relative', zIndex: 10, flexShrink: 0,
+            }}>
+              {/* Slash hint bar */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <button
+                  onClick={() => { setInputValue('/'); setShowSlash(true); inputRef.current?.focus(); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    padding: '3px 9px', borderRadius: '7px', cursor: 'pointer',
+                    background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)',
+                    border: `1px solid ${isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.15)'}`,
+                    color: '#a78bfa', fontSize: '10px', fontFamily: 'monospace', fontWeight: 700,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.14)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.06)'; }}
+                >
+                  <Sparkles style={{ width: '10px', height: '10px' }} />/ Commands
+                </button>
+                <span style={{ fontSize: '9px', fontFamily: 'monospace', color: isDark ? '#1e293b' : '#cbd5e1' }}>
+                  Shift+Enter for newline · Enter to send
                 </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {QUICK_COMMANDS.map((qc, i) => {
-                    const CardIcon = qc.icon;
-                    return (
-                      <button
-                        key={i}
-                        disabled={copilotMutation.isPending}
-                        onClick={() => handleSendMessage(qc.query)}
-                        className="p-3 rounded-xl border text-left flex flex-col gap-1 transition-all hover:-translate-y-0.5 cursor-pointer disabled:opacity-50 hover:shadow-md"
-                        style={{
-                          background: isDark ? 'rgba(255,255,255,0.02)' : '#ffffff',
-                          borderColor: 'var(--color-card-border)',
-                        }}
-                      >
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <CardIcon className="w-3.5 h-3.5 text-violet-400" />
-                          <span className="text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>{qc.cmd}</span>
-                        </div>
-                        <span className="text-[10px]" style={{ color: 'var(--color-text-muted)', lineHeight: 1.4 }}>{qc.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
-            )}
 
-            {/* Input Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage(inputValue);
-              }}
-              className="p-6 border-t flex flex-col gap-3 relative z-10"
-              style={{ 
-                borderColor: 'var(--color-card-border)',
-                background: isDark ? 'rgba(10, 15, 30, 0.95)' : 'rgba(248, 250, 252, 0.95)',
-                paddingBottom: '24px'
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div className="flex-1 relative flex items-center">
-                  <input
-                    type="text"
-                    placeholder="Ask anything, or type '/' for quick commands..."
+              {/* Textarea + Send row */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+                <div style={{
+                  flex: 1,
+                  borderRadius: '16px',
+                  border: `1.5px solid ${isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.15)'}`,
+                  background: isDark ? 'rgba(255,255,255,0.04)' : '#fff',
+                  boxShadow: isDark ? '0 0 0 rgba(99,102,241,0)' : '0 2px 8px rgba(0,0,0,0.04)',
+                  transition: 'border-color 0.25s, box-shadow 0.25s',
+                  overflow: 'hidden',
+                }}
+                  onFocusCapture={e => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.borderColor = '#6366f1';
+                    el.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.15)';
+                  }}
+                  onBlurCapture={e => {
+                    const el = e.currentTarget as HTMLDivElement;
+                    el.style.borderColor = isDark ? 'rgba(99,102,241,0.18)' : 'rgba(99,102,241,0.15)';
+                    el.style.boxShadow = isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.04)';
+                  }}
+                >
+                  <textarea
+                    ref={inputRef}
                     value={inputValue}
-                    onChange={(e) => handleInputChange(e.target.value)}
-                    disabled={copilotMutation.isPending}
-                    className="w-full border rounded-2xl px-4 py-3 text-xs outline-none transition-all duration-300 pr-10"
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    disabled={mutation.isPending}
+                    placeholder="Ask about sprints, blockers, velocity, or type '/' for commands..."
+                    rows={1}
                     style={{
-                      background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
-                      borderColor: 'var(--color-card-border)',
-                      color: 'var(--color-text-primary)'
-                    }}
-                    onFocus={e => {
-                      e.target.style.borderColor = 'var(--color-accent)';
-                      e.target.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.15)';
-                    }}
-                    onBlur={e => {
-                      e.target.style.borderColor = 'var(--color-card-border)';
-                      e.target.style.boxShadow = 'none';
+                      width: '100%',
+                      padding: '13px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      resize: 'none',
+                      fontFamily: 'inherit',
+                      fontSize: '13px',
+                      lineHeight: 1.55,
+                      color: isDark ? '#e2e8f0' : '#1e293b',
+                      minHeight: '44px',
+                      maxHeight: '120px',
+                      display: 'block',
                     }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowSlashMenu(!showSlashMenu)}
-                    className="absolute right-3 p-1.5 rounded-lg text-xs font-mono font-bold hover:bg-white/5 transition-colors animate-pulse"
-                    style={{ color: 'var(--color-text-faint)' }}
-                  >
-                    /
-                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={!inputValue.trim() || copilotMutation.isPending}
-                  className="w-10 h-10 shrink-0 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-2xl flex items-center justify-center transition-all duration-300 shadow-lg shadow-violet-600/10 cursor-pointer hover:scale-[1.03]"
+
+                {/* Send Button */}
+                <motion.button
+                  type="button"
+                  onClick={() => sendMessage(inputValue)}
+                  disabled={!inputValue.trim() || mutation.isPending}
+                  whileHover={!inputValue.trim() || mutation.isPending ? {} : { scale: 1.05 }}
+                  whileTap={!inputValue.trim() || mutation.isPending ? {} : { scale: 0.95 }}
+                  style={{
+                    width: '48px', height: '48px', borderRadius: '15px', cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
+                    background: inputValue.trim() && !mutation.isPending
+                      ? 'linear-gradient(135deg, #6366f1, #4f46e5)'
+                      : (isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'),
+                    border: `1px solid ${inputValue.trim() && !mutation.isPending ? 'rgba(99,102,241,0.6)' : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: inputValue.trim() && !mutation.isPending ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
+                    transition: 'all 0.25s', flexShrink: 0,
+                  }}
                 >
-                  <Send className="w-4 h-4" />
-                </button>
+                  <Send style={{
+                    width: '17px', height: '17px',
+                    color: inputValue.trim() && !mutation.isPending ? '#fff' : (isDark ? '#334155' : '#94a3b8'),
+                    transform: 'rotate(-10deg)',
+                  }} />
+                </motion.button>
               </div>
-            </form>
+            </div>
           </motion.div>
         </>
       )}

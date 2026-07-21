@@ -5,7 +5,7 @@ import Navigation from './navigation';
 import CopilotDrawer from './copilot-drawer';
 import { useAppStore } from '@/lib/store';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Bell, ChevronDown, Database, Cpu, RefreshCw, Palette, Sun, Moon, Bot } from 'lucide-react';
+import { Search, Bell, ChevronDown, Cpu, RefreshCw, Palette, Sun, Moon, Bot } from 'lucide-react';
 
 /* ── Theme color token maps ───────────────────────────────────────── */
 const themeColors = {
@@ -257,70 +257,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div style={{ width: '1px', height: '22px', background: 'rgba(51,65,85,0.50)' }} />
 
-            {/* Status pills */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  padding: '5px 12px', 
-                  borderRadius: '10px', 
-                  background: isLight ? 'rgba(34,197,94,0.08)' : 'rgba(34,197,94,0.12)', 
-                  border: '1px solid rgba(34,197,94,0.25)',
-                  boxShadow: '0 0 10px rgba(34,197,94,0.1)'
-                }}
-              >
-                <Database style={{ width: '12px', height: '12px', color: '#22c55e' }} />
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: '10px', fontWeight: 800, color: '#22c55e', letterSpacing: '0.05em' }}>DATABASE SYNC</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" style={{ boxShadow: '0 0 8px #10b981' }} />
-              </div>
-              
-              <button
-                onClick={() => toggleCopilot(true)}
-                title="Open AI Copilot"
+            {/* AI Copilot button only */}
+            <button
+              onClick={() => toggleCopilot(true)}
+              title="Open AI Copilot"
+              style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(45,212,167,0.1) 100%)',
+                border: '1px solid rgba(99,102,241,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 12px rgba(99,102,241,0.15)',
+                transition: 'all 0.25s ease',
+                position: 'relative'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.transform = 'scale(1.07)';
+                e.currentTarget.style.boxShadow = '0 0 20px rgba(99,102,241,0.35)';
+                e.currentTarget.style.borderColor = 'rgba(99,102,241,0.55)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.boxShadow = '0 0 12px rgba(99,102,241,0.15)';
+                e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
+              }}
+            >
+              <Bot style={{ width: '16px', height: '16px', color: '#6366f1' }} className="animate-pulse" />
+              <span
                 style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(45,212,167,0.1) 100%)',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#6366f1',
-                  boxShadow: '0 0 12px rgba(99,102,241,0.15)',
-                  transition: 'all 0.25s ease',
-                  position: 'relative'
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: '#2dd4a7',
+                  border: '1.5px solid var(--color-background)',
+                  boxShadow: '0 0 6px #2dd4a7'
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = '0 0 18px rgba(99,102,241,0.3)';
-                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = '0 0 12px rgba(99,102,241,0.15)';
-                  e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
-                }}
-              >
-                <Bot style={{ width: '16px', height: '16px', color: '#6366f1' }} className="animate-pulse" />
-                <span 
-                  style={{ 
-                    position: 'absolute', 
-                    top: '-2px', 
-                    right: '-2px', 
-                    width: '7px', 
-                    height: '7px', 
-                    borderRadius: '50%', 
-                    background: '#2dd4a7', 
-                    border: '1px solid var(--color-background)',
-                    boxShadow: '0 0 6px #2dd4a7'
-                  }} 
-                />
-              </button>
-            </div>
+              />
+            </button>
 
             <div style={{ width: '1px', height: '22px', background: 'rgba(51,65,85,0.50)' }} />
 
