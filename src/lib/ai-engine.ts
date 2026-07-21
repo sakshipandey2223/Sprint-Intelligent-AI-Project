@@ -1,7 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import { getDashboardTelemetry } from './db';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GROQ_API_KEY   = process.env.GROQ_API_KEY   || '';
+
+// Primary: Groq (free, ultra-fast — llama-3.3-70b)
+// Fallback: Gemini 2.0 Flash
+const PREFERRED_ENGINE: 'groq' | 'gemini' = GROQ_API_KEY ? 'groq' : 'gemini';
 
 function buildSystemPrompt(): string {
   return `You are Sprint Intelligence AI — an expert Agile/Scrum coach and engineering analytics assistant embedded inside a Sprint KPI dashboard.
@@ -57,93 +63,121 @@ ${JSON.stringify(data.analyticsSummary, null, 2)}
 ${JSON.stringify(data.issues?.filter((i: any) => i.sprintId === active?.id), null, 2)}`;
 }
 
+// ── Groq engine (free, ultra-fast) ────────────────────────────────
+async function callWithGroq(systemPrompt: string, userMessage: string, history: { role: string; content: string }[] = []): Promise<string> {
+  const groq = new Groq({ apiKey: GROQ_API_KEY });
+  const messages: any[] = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userMessage },
+  ];
+
+  const completion = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages,
+    temperature: 0.7,
+    max_tokens: 2048,
+  });
+
+  return completion.choices[0]?.message?.content || 'No response from AI.';
+}
+
+// ── Gemini engine (fallback) ───────────────────────────────────────
+async function callWithGemini(systemPrompt: string, userMessage: string, history: { role: 'user' | 'model'; parts: { text: string }[] }[] = []): Promise<string> {
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', systemInstruction: systemPrompt });
+  const chat = model.startChat({ history, generationConfig: { temperature: 0.7, maxOutputTokens: 2048 } });
+  const result = await chat.sendMessage(userMessage);
+  return result.response.text();
+}
+
+// ── Main exported functions ────────────────────────────────────────
 export async function callGeminiAI(
   userMessage: string,
   chatHistory: { role: 'user' | 'model'; parts: { text: string }[] }[] = []
 ): Promise<{ answer: string; suggestedQuestions: string[] }> {
-  if (!GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY && !GROQ_API_KEY) {
     return {
-      answer: '⚠️ **Gemini API Key not configured.** Please add `GEMINI_API_KEY` to your environment variables.',
+      answer: '⚠️ **No AI key configured.** Please add `GROQ_API_KEY` or `GEMINI_API_KEY` to your environment variables.',
       suggestedQuestions: [],
     };
   }
 
   try {
-    // Fetch live dashboard data
     const data = await getDashboardTelemetry(null);
-    
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: buildSystemPrompt(),
-    });
-
+    const systemPrompt = buildSystemPrompt();
     const contextPrefix = buildContextPrompt(data);
-    
-    // For new chats, prepend context to first user message
-    const history = chatHistory.length > 0 ? chatHistory : [];
-
-    const chat = model.startChat({
-      history,
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-    });
-
-    // Send context + user message together on first turn, just user message after
-    const messageToSend = chatHistory.length === 0
+    const fullUserMessage = chatHistory.length === 0
       ? `${contextPrefix}\n\n---\n\n## User Question\n${userMessage}`
       : userMessage;
 
-    const result = await chat.sendMessage(messageToSend);
-    const answer = result.response.text();
+    let answer: string;
 
-    // Generate follow-up question suggestions
-    const suggestResult = await model.generateContent(
-      `Based on this sprint context and the answer just given, suggest 3 short follow-up questions a scrum master might ask. Return ONLY a JSON array of 3 strings, nothing else.\n\nAnswer was about: ${userMessage}`
-    );
-    
-    let suggestedQuestions: string[] = [];
-    try {
-      const raw = suggestResult.response.text().replace(/```json|```/g, '').trim();
-      suggestedQuestions = JSON.parse(raw);
-    } catch {
-      suggestedQuestions = [
-        'Who is most at risk of burnout?',
-        'What should we do today to improve sprint health?',
-        'Generate an executive summary.',
-      ];
+    if (PREFERRED_ENGINE === 'groq') {
+      // Convert Gemini-style history to Groq format
+      const groqHistory = chatHistory.map(h => ({
+        role: h.role === 'model' ? 'assistant' : 'user',
+        content: h.parts[0]?.text || '',
+      }));
+      answer = await callWithGroq(systemPrompt, fullUserMessage, groqHistory);
+    } else {
+      answer = await callWithGemini(systemPrompt, fullUserMessage, chatHistory);
     }
+
+    // Generate follow-up suggestions (simple, no extra API call)
+    const suggestedQuestions = [
+      'Who is most at risk of burnout?',
+      'What should the team focus on today?',
+      'Generate an executive summary.',
+    ];
 
     return { answer, suggestedQuestions };
   } catch (error: any) {
-    console.error('Gemini API error:', error);
+    // Try fallback engine if primary fails
+    try {
+      if (PREFERRED_ENGINE === 'groq' && GEMINI_API_KEY) {
+        const data = await getDashboardTelemetry(null);
+        const msg = `${buildContextPrompt(data)}\n\n---\n\n${userMessage}`;
+        const answer = await callWithGemini(buildSystemPrompt(), msg, []);
+        return { answer, suggestedQuestions: [] };
+      }
+    } catch {}
+
+    console.error('AI error:', error);
     return {
-      answer: `❌ **AI Error:** ${error.message || 'Failed to contact Gemini AI. Please check your API key.'}`,
+      answer: `❌ **AI Error:** ${error.message || 'Failed to contact AI. Please check your API keys.'}`,
       suggestedQuestions: [],
     };
   }
 }
 
 export async function callGeminiForInsight(prompt: string): Promise<string> {
-  if (!GEMINI_API_KEY) return '⚠️ API Key not configured.';
-  
+  if (!GEMINI_API_KEY && !GROQ_API_KEY) return '⚠️ No AI API key configured.';
+
   try {
     const data = await getDashboardTelemetry(null);
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-      systemInstruction: buildSystemPrompt(),
-    });
+    const systemPrompt = buildSystemPrompt();
+    const fullPrompt = `${buildContextPrompt(data)}\n\n---\n\n${prompt}`;
 
-    const result = await model.generateContent(
-      `${buildContextPrompt(data)}\n\n---\n\n${prompt}`
-    );
-    return result.response.text();
+    if (PREFERRED_ENGINE === 'groq') {
+      return await callWithGroq(systemPrompt, fullPrompt);
+    } else {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash', systemInstruction: systemPrompt });
+      const result = await model.generateContent(fullPrompt);
+      return result.response.text();
+    }
   } catch (error: any) {
-    return `❌ Error: ${error.message}`;
+    // Fallback
+    try {
+      if (PREFERRED_ENGINE === 'groq' && GEMINI_API_KEY) {
+        const data = await getDashboardTelemetry(null);
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent(`${buildContextPrompt(data)}\n\n---\n\n${prompt}`);
+        return result.response.text();
+      }
+    } catch {}
+    return `❌ AI Error: ${error.message}`;
   }
 }
