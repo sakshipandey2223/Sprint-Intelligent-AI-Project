@@ -291,21 +291,22 @@ export default function SprintBoardPage() {
                       draggable
                       onDragStart={(e) => handleDragStart(e, issue.id)}
                       onDragEnd={handleDragEnd}
+                      style={{ marginBottom: 0 }}
                     >
-                    <motion.div
-                      layoutId={issue.id}
-                      whileHover={{ y: -2, scale: 1.01 }}
-                      style={{
-                        background: T.card,
-                        border: `1px solid ${issue.isBlocked ? '#ef4444' : T.border}`,
-                        borderRadius: '8px',
-                        padding: '16px',
-                        cursor: 'grab',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                      }}
-                    >
+                      <motion.div
+                        layoutId={issue.id}
+                        whileHover={{ y: -2, scale: 1.01 }}
+                        style={{
+                          background: T.card,
+                          border: `1px solid ${issue.isBlocked ? '#ef4444' : T.border}`,
+                          borderRadius: '8px',
+                          padding: '16px',
+                          cursor: 'grab',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                        }}
+                      >
                       {/* Epic Color Bar */}
                       {epic && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '4px', background: epic.color }} />}
                       
@@ -364,7 +365,7 @@ export default function SprintBoardPage() {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                      </motion.div>
                     </div>
                   );
                 })}
