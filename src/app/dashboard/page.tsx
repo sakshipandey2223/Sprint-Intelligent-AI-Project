@@ -120,6 +120,42 @@ function StatCard({ value, label, sub, icon, color, trend, isDark }: {
   );
 }
 
+/* ── Developer Avatar with Image Fallback ────────── */
+function DevAvatarImg({ src, name, fallbackBg, initials }: { src?: string; name: string; fallbackBg: string; initials: string }) {
+  const [imgError, setImgError] = useState(false);
+
+  if (src && !imgError) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setImgError(true)}
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '10px',
+          objectFit: 'cover',
+          flexShrink: 0,
+          border: `1.5px solid ${fallbackBg}50`,
+          boxShadow: `0 2px 8px ${fallbackBg}25`
+        }}
+      />
+    );
+  }
+
+  return (
+    <div style={{
+      width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
+      background: `${fallbackBg}20`, border: `2px solid ${fallbackBg}40`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '11px', fontWeight: 800, color: fallbackBg, fontFamily: 'var(--font-ui)',
+    }}>
+      {initials}
+    </div>
+  );
+}
+
+
 /* ── SVG Ring Progress ─────────────────────────── */
 function RingProgress({ value, max, color, size = 100, strokeWidth = 8, label, subLabel, isDark }: {
   value: number; max: number; color: string; size?: number; strokeWidth?: number;
@@ -717,12 +753,7 @@ export default function Dashboard() {
                   >
                     {/* Dev name + avatar */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '10px', flexShrink: 0,
-                        background: `${avatarBg}20`, border: `2px solid ${avatarBg}40`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', fontWeight: 800, color: avatarBg, fontFamily: 'var(--font-ui)',
-                      }}>{initials}</div>
+                      <DevAvatarImg src={dev.avatar} name={dev.name} fallbackBg={avatarBg} initials={initials} />
                       <div>
                         <div style={{ fontSize: '12px', fontWeight: 700, color: T.text }}>{dev.name}</div>
                         <div style={{ fontSize: '9px', color: T.faint, fontFamily: 'monospace' }}>
