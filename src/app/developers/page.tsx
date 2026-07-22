@@ -119,14 +119,14 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.45)',
-          backdropFilter: 'blur(3px)',
-          zIndex: 998,
+          background: 'rgba(0, 0, 0, 0.55)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 1000,
           cursor: 'pointer',
         }}
       />
 
-      {/* Floating Side Drawer */}
+      {/* Floating Side Panel starting cleanly from top with full internal scrolling */}
       <motion.div
         ref={drawerRef}
         initial={{ x: '100%', opacity: 0 }}
@@ -135,31 +135,38 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         style={{
           position: 'fixed',
-          top: 0,
-          right: 0,
-          width: '100%',
-          maxWidth: '440px',
-          height: '100vh',
-          zIndex: 999,
-          background: isDark ? '#0b1120' : '#ffffff',
-          borderLeft: `1px solid ${T.border}`,
-          boxShadow: '-10px 0 40px rgba(0, 0, 0, 0.35)',
+          top: '20px',
+          right: '20px',
+          bottom: '20px',
+          width: 'calc(100% - 40px)',
+          maxWidth: '460px',
+          maxHeight: 'calc(100vh - 40px)',
+          zIndex: 1001,
+          background: isDark ? '#0f172a' : '#ffffff',
+          border: `1px solid ${T.border}`,
+          borderRadius: '24px',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
         }}
       >
-        {/* Drawer Header */}
+        {/* Fixed Top Header (Never Hidden) */}
         <div style={{
           padding: '20px 24px',
           borderBottom: `1px solid ${T.border}`,
-          background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+          background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.95)',
+          backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <DevAvatar src={dev.avatar} name={dev.name} size={50} />
+            <DevAvatar src={dev.avatar} name={dev.name} size={48} />
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.text, margin: 0 }}>{dev.name}</h3>
@@ -183,8 +190,8 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
           </button>
         </div>
 
-        {/* Drawer Scrollable Body */}
-        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Dedicated Scrollable Panel Body */}
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '20px', WebkitOverflowScrolling: 'touch' }}>
           
           {/* Key Metrics Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
