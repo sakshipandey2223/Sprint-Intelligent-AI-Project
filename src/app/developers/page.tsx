@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DashboardLayout from '@/components/dashboard-layout';
 import { useAppStore } from '@/lib/store';
 import {
@@ -12,22 +12,242 @@ import {
   ListTodo,
   Activity,
   Bug,
+  Award,
+  Zap,
+  ChevronRight,
+  X,
+  Code,
+  Sparkles,
+  TrendingUp,
+  Briefcase
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, Cell } from 'recharts';
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+/* ── Theme Tokens ───────────────────────────────────────── */
+const TK = {
+  dark: {
+    bg: 'transparent',
+    card: 'rgba(255, 255, 255, 0.03)',
+    cardHover: 'rgba(255, 255, 255, 0.06)',
+    cardActive: 'rgba(99, 102, 241, 0.12)',
+    text: '#f8fafc',
+    textMuted: '#94a3b8',
+    textFaint: '#475569',
+    border: 'rgba(255, 255, 255, 0.08)',
+    borderActive: 'rgba(99, 102, 241, 0.5)',
+    shadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+    badgeBg: 'rgba(15, 23, 42, 0.6)',
+  },
+  light: {
+    bg: 'transparent',
+    card: '#ffffff',
+    cardHover: '#f8fafc',
+    cardActive: 'rgba(99, 102, 241, 0.08)',
+    text: '#0f172a',
+    textMuted: '#64748b',
+    textFaint: '#94a3b8',
+    border: 'rgba(203, 213, 225, 0.8)',
+    borderActive: 'rgba(99, 102, 241, 0.4)',
+    shadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
+    badgeBg: '#f1f5f9',
+  }
 };
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 230, damping: 22 } },
-};
+const AVATAR_PALETTE = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
 
+/* ── Fallback Avatar Component (Preserves image & falls back cleanly) ── */
+function DevAvatar({ src, name, size = 48, className = '' }: { src?: string; name: string; size?: number; className?: string }) {
+  const [hasError, setHasError] = useState(false);
+  const initials = name ? name.split(' ').map(n => n[0]).join('').slice(0, 2) : '?';
+  const colorIndex = (name || '').length % AVATAR_PALETTE.length;
+  const bgColor = AVATAR_PALETTE[colorIndex];
+
+  if (src && !hasError) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        onError={() => setHasError(true)}
+        style={{ width: `${size}px`, height: `${size}px` }}
+        className={`rounded-2xl object-cover border border-white/10 shadow-sm flex-shrink-0 ${className}`}
+      />
+    );
+  }
+
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        background: `linear-gradient(135deg, ${bgColor}40, ${bgColor}15)`,
+        border: `1.5px solid ${bgColor}60`,
+        color: bgColor,
+        fontSize: `${Math.round(size * 0.38)}px`,
+      }}
+      className={`rounded-2xl font-black flex items-center justify-center flex-shrink-0 shadow-sm ${className}`}
+    >
+      {initials}
+    </div>
+  );
+}
+
+/* ── Developer Detail Modal ───────────────────────────────── */
+function DevDetailModal({ dev, issues, epics, isDark, T, onClose }: {
+  dev: any; issues: any[]; epics: any[]; isDark: boolean; T: typeof TK.dark; onClose: () => void;
+}) {
+  const isOverloaded = dev.assignedPoints > dev.capacityPoints;
+  const colorIndex = (dev.name || '').length % AVATAR_PALETTE.length;
+  const mainColor = AVATAR_PALETTE[colorIndex];
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200 }}
+      />
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%',
+          maxWidth: '560px',
+          maxHeight: '85vh',
+          zIndex: 201,
+          background: isDark ? '#0f172a' : '#ffffff',
+          border: `1px solid ${T.border}`,
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Modal Header */}
+        <div style={{
+          padding: '24px',
+          borderBottom: `1px solid ${T.border}`,
+          background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          position: 'relative'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <DevAvatar src={dev.avatar} name={dev.name} size={56} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: T.text, margin: 0 }}>{dev.name}</h3>
+                {isOverloaded && (
+                  <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 8px', borderRadius: '99px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'monospace' }}>
+                    OVERLOADED
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: mainColor, fontFamily: 'monospace', display: 'block', marginTop: '2px' }}>
+                {dev.role}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ width: '32px', height: '32px', borderRadius: '10px', border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Key Metrics Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div style={{ padding: '12px', borderRadius: '14px', background: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9', border: `1px solid ${T.border}`, textAlign: 'center' }}>
+              <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase' }}>Workload</span>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: isOverloaded ? '#ef4444' : '#10b981', marginTop: '2px' }}>
+                {dev.assignedPoints} / {dev.capacityPoints} SP
+              </div>
+            </div>
+            <div style={{ padding: '12px', borderRadius: '14px', background: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9', border: `1px solid ${T.border}`, textAlign: 'center' }}>
+              <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase' }}>Completed</span>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#6366f1', marginTop: '2px' }}>
+                {dev.completedIssuesCount} Issues
+              </div>
+            </div>
+            <div style={{ padding: '12px', borderRadius: '14px', background: isDark ? 'rgba(255,255,255,0.03)' : '#f1f5f9', border: `1px solid ${T.border}`, textAlign: 'center' }}>
+              <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase' }}>Defect Density</span>
+              <div style={{ fontSize: '15px', fontWeight: 900, color: '#f59e0b', marginTop: '2px' }}>
+                {dev.defectDensity}
+              </div>
+            </div>
+          </div>
+
+          {/* Skill Matrix */}
+          <div>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: T.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '8px' }}>
+              Skill Matrix
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {dev.skills.map((skill: string) => (
+                <span key={skill} style={{ padding: '4px 10px', borderRadius: '8px', background: `${mainColor}15`, border: `1px solid ${mainColor}35`, color: mainColor, fontSize: '11px', fontWeight: 700, fontFamily: 'monospace' }}>
+                  ⚡ {skill}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Active Tickets */}
+          <div>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: T.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '10px' }}>
+              Active Assigned Tickets ({issues.length})
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+              {issues.length === 0 ? (
+                <div style={{ padding: '16px', borderRadius: '12px', border: `1px dashed ${T.border}`, textAlign: 'center', color: T.textFaint, fontSize: '12px' }}>
+                  No active issues assigned in this sprint.
+                </div>
+              ) : (
+                issues.map((issue: any) => {
+                  const epic = epics.find((e: any) => e.id === issue.epicId);
+                  return (
+                    <div key={issue.id} style={{ padding: '10px 14px', borderRadius: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                        <span style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 800, color: '#6366f1', flexShrink: 0 }}>{issue.id}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{issue.title}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                        {epic && <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', background: `${epic.color}20`, color: epic.color }}>{epic.name}</span>}
+                        <span style={{ fontSize: '10px', fontWeight: 800, fontFamily: 'monospace', color: T.textMuted }}>{issue.storyPoints} SP</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+/* ════════════════════════ MAIN COMPONENT ════════════════════════ */
 export default function DeveloperInsights() {
-  const { activeSprintId } = useAppStore();
+  const { activeSprintId, theme } = useAppStore();
+  const isDark = theme === 'dark';
+  const T = isDark ? TK.dark : TK.light;
+
   const [selectedDevId, setSelectedDevId] = useState<string>('dev-1');
+  const [modalDev, setModalDev] = useState<any | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-data', activeSprintId],
@@ -41,21 +261,21 @@ export default function DeveloperInsights() {
   if (isLoading || !data) {
     return (
       <DashboardLayout>
-        <div className="flex-1 h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-950/20">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative w-12 h-12">
-              <div className="absolute inset-0 rounded-full border-2 border-violet-500/20" />
-              <div className="absolute inset-0 rounded-full border-t-2 border-violet-500 animate-spin" />
-            </div>
-            <span className="text-xs font-mono text-slate-400">Compiling team workload graphs...</span>
+        <div style={{ height: 'calc(100vh - 80px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+              style={{ width: '36px', height: '36px', borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#6366f1', borderRightColor: '#2dd4bf' }}
+            />
+            <span style={{ fontSize: '12px', fontFamily: 'monospace', color: T.textMuted }}>Compiling team workload graphs...</span>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
-  const { developers, issues, epics } = data;
-
+  const { developers, issues, epics, sprints } = data;
   const devsAndQa = developers.filter((d: any) => d.role === 'Developer' || d.role === 'QA');
   const selectedDev = developers.find((d: any) => d.id === selectedDevId) || developers[0];
 
@@ -63,14 +283,11 @@ export default function DeveloperInsights() {
     (i: any) => i.assigneeId === selectedDev.id && i.sprintId === activeSprintId
   );
 
-  const getPriorityStyle = (priority: string) => {
-    switch (priority.toLowerCase()) {
-      case 'critical': return 'text-rose-400 bg-rose-500/10 border-rose-500/20';
-      case 'high': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-      case 'medium': return 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
-      default: return 'text-slate-400 bg-slate-500/10 border-slate-500/20';
-    }
-  };
+  const totalCap = devsAndQa.reduce((acc: number, d: any) => acc + d.capacityPoints, 0);
+  const totalAssigned = devsAndQa.reduce((acc: number, d: any) => acc + d.assignedPoints, 0);
+  const avgUtil = totalCap > 0 ? Math.round((totalAssigned / totalCap) * 100) : 0;
+  const overloadedCount = devsAndQa.filter((d: any) => d.assignedPoints > d.capacityPoints).length;
+  const completedSP = issues.filter((i: any) => i.status === 'Done').reduce((acc: number, i: any) => acc + i.storyPoints, 0);
 
   const comparisonChartData = devsAndQa.map((d: any) => ({
     name: d.name.split(' ')[0],
@@ -80,95 +297,156 @@ export default function DeveloperInsights() {
 
   return (
     <DashboardLayout>
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="show"
-        className="p-8 space-y-8 page-transition-wrap"
-      >
-        {/* Header */}
-        <div className="pb-2 border-b border-white/5">
-          <h1 className="text-2xl font-black text-white tracking-tight">Developer Insights</h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Workload distribution, individual capacities, defect densities, and skill matrices.
-          </p>
+      <AnimatePresence>
+        {modalDev && (
+          <DevDetailModal
+            dev={modalDev}
+            issues={issues.filter((i: any) => i.assigneeId === modalDev.id && i.sprintId === activeSprintId)}
+            epics={epics}
+            isDark={isDark}
+            T={T}
+            onClose={() => setModalDev(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        
+        {/* ── HEADER ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '22px', fontWeight: 900, color: T.text, letterSpacing: '-0.02em', margin: 0 }}>Team Insights</h1>
+              <span style={{ fontSize: '10px', fontWeight: 800, padding: '3px 10px', borderRadius: '99px', background: 'rgba(99,102,241,0.15)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.3)', fontFamily: 'monospace' }}>
+                Sprint {activeSprintId}
+              </span>
+            </div>
+            <p style={{ fontSize: '12px', color: T.textMuted, marginTop: '4px', margin: '4px 0 0' }}>
+              Workload distribution, individual capacities, defect densities, and skill matrices.
+            </p>
+          </div>
         </div>
 
-        {/* Team Grid & Personal Details */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+        {/* ── STATS CARDS ROW ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+          {[
+            { label: 'Team Size', value: devsAndQa.length, sub: 'Engineers & QA', icon: Users, color: '#6366f1' },
+            { label: 'Avg Utilization', value: `${avgUtil}%`, sub: `${totalAssigned} / ${totalCap} SP`, icon: Activity, color: avgUtil > 90 ? '#ef4444' : '#2dd4bf' },
+            { label: 'Points Delivered', value: `${completedSP} SP`, sub: 'Current Sprint', icon: CheckCircle2, color: '#10b981' },
+            { label: 'Overloaded Members', value: overloadedCount, sub: overloadedCount > 0 ? 'Requires rebalancing' : 'Healthy load', icon: ShieldAlert, color: overloadedCount > 0 ? '#ef4444' : '#6366f1' },
+          ].map((card, i) => (
+            <motion.div
+              key={card.label}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+              whileHover={{ y: -2 }}
+              style={{
+                padding: '16px 20px',
+                borderRadius: '16px',
+                background: T.card,
+                border: `1px solid ${T.border}`,
+                boxShadow: T.shadow,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{card.label}</span>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: T.text, marginTop: '2px' }}>{card.value}</div>
+                <span style={{ fontSize: '10px', color: T.textMuted, display: 'block', marginTop: '2px' }}>{card.sub}</span>
+              </div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${card.color}15`, border: `1px solid ${card.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: card.color }}>
+                <card.icon size={20} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── MAIN WORKSPACE GRID ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', alignItems: 'start' }}>
           
-          {/* Left: Team Roster Cards */}
-          <div className="xl:col-span-2 space-y-5">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 font-mono uppercase tracking-wider">
-              <Users className="w-5 h-5 text-violet-400" />
-              Team Roster & Workloads
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Left Column: Team Roster Cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: T.text, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={16} style={{ color: '#6366f1' }} />
+                Team Roster & Workloads
+              </span>
+              <span style={{ fontSize: '11px', color: T.textMuted }}>Click member for deep dive</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
               {devsAndQa.map((dev: any) => {
                 const isOverloaded = dev.assignedPoints > dev.capacityPoints;
-                const isCurrentSelection = dev.id === selectedDevId;
+                const isSelected = dev.id === selectedDevId;
+                const colorIdx = (dev.name || '').length % AVATAR_PALETTE.length;
+                const accentColor = AVATAR_PALETTE[colorIdx];
 
                 return (
                   <motion.div
                     key={dev.id}
-                    variants={itemVariants}
-                    onClick={() => setSelectedDevId(dev.id)}
-                    className={`p-5 rounded-2xl bg-glass border transition duration-300 cursor-pointer flex flex-col justify-between gap-4 relative ${
-                      isCurrentSelection
-                        ? 'border-violet-500 glow-primary bg-violet-950/15'
-                        : isOverloaded
-                        ? 'border-rose-500/30 hover:border-rose-500/50 hover:bg-rose-500/5'
-                        : 'border-white/5 hover:border-white/15'
-                    }`}
+                    initial={{ opacity: 0, scale: 0.96 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    whileHover={{ y: -3, boxShadow: `0 8px 24px rgba(0,0,0,0.2)` }}
+                    onClick={() => { setSelectedDevId(dev.id); setModalDev(dev); }}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '16px',
+                      background: isSelected ? T.cardActive : T.card,
+                      border: `1.5px solid ${isSelected ? T.borderActive : isOverloaded ? 'rgba(239,68,68,0.3)' : T.border}`,
+                      cursor: 'pointer',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                      boxShadow: isSelected ? `0 0 20px ${accentColor}20` : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
                   >
                     {isOverloaded && (
-                      <span className="absolute top-4 right-4 flex items-center gap-1 bg-rose-500/10 border border-rose-500/25 text-rose-400 text-[8px] font-bold font-mono px-2 py-0.5 rounded-full">
-                        <ShieldAlert className="w-3 h-3" /> OVERLOADED
+                      <span style={{ position: 'absolute', top: '14px', right: '14px', fontSize: '8px', fontWeight: 800, padding: '2px 7px', borderRadius: '99px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <ShieldAlert size={10} /> OVERLOADED
                       </span>
                     )}
 
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={dev.avatar}
-                        alt={dev.name}
-                        className="w-13 h-13 rounded-xl object-cover border border-white/10"
-                      />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <DevAvatar src={dev.avatar} name={dev.name} size={44} />
                       <div>
-                        <h4 className="text-sm font-extrabold text-white leading-snug">{dev.name}</h4>
-                        <span className="text-[10px] text-slate-400 font-mono block mt-0.5">{dev.role}</span>
+                        <h4 style={{ fontSize: '14px', fontWeight: 800, color: T.text, margin: 0 }}>{dev.name}</h4>
+                        <span style={{ fontSize: '11px', color: accentColor, fontWeight: 700, fontFamily: 'monospace', display: 'block', marginTop: '2px' }}>
+                          {dev.role}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Utilization stats bar */}
-                    <div className="space-y-2 mt-1">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-slate-500 font-bold">Utilization</span>
-                        <span className={`font-bold ${isOverloaded ? 'text-rose-400' : 'text-slate-300'}`}>
+                    {/* Progress Bar */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontFamily: 'monospace', marginBottom: '4px' }}>
+                        <span style={{ color: T.textFaint, fontWeight: 700 }}>UTILIZATION</span>
+                        <span style={{ fontWeight: 800, color: isOverloaded ? '#ef4444' : dev.utilization >= 75 ? '#2dd4bf' : '#10b981' }}>
                           {dev.assignedPoints} / {dev.capacityPoints} SP ({dev.utilization}%)
                         </span>
                       </div>
-                      <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                      <div style={{ height: '5px', borderRadius: '99px', background: T.border, overflow: 'hidden' }}>
                         <motion.div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${Math.min(dev.utilization, 100)}%`,
-                            backgroundColor: isOverloaded ? '#ef4444' : dev.utilization >= 75 ? '#06b6d4' : '#10b981',
-                          }}
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.min(dev.utilization, 100)}%` }}
                           transition={{ duration: 0.8, ease: 'easeOut' }}
+                          style={{
+                            height: '100%',
+                            borderRadius: '99px',
+                            background: isOverloaded ? '#ef4444' : dev.utilization >= 75 ? '#2dd4bf' : '#10b981',
+                          }}
                         />
                       </div>
                     </div>
 
-                    {/* Skill tags */}
-                    <div className="flex flex-wrap gap-1.5 mt-1">
+                    {/* Skills */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {dev.skills.map((skill: string) => (
-                        <span
-                          key={skill}
-                          className="px-2 py-0.5 rounded bg-slate-900 border border-white/5 text-[8px] font-bold font-mono text-slate-400"
-                        >
+                        <span key={skill} style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'monospace', padding: '2px 6px', borderRadius: '4px', background: isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9', color: T.textMuted, border: `1px solid ${T.border}` }}>
                           {skill}
                         </span>
                       ))}
@@ -179,73 +457,59 @@ export default function DeveloperInsights() {
             </div>
           </div>
 
-          {/* Right: Detailed Personal Workspace */}
-          <div className="bg-glass rounded-2xl p-7 flex flex-col gap-6 sticky top-8">
-            <div className="flex items-center gap-4 pb-4 border-b border-white/5">
-              <img
-                src={selectedDev.avatar}
-                alt={selectedDev.name}
-                className="w-16 h-16 rounded-2xl object-cover border border-white/10 shadow-lg"
-              />
+          {/* Right Column: Personal Detail Workspace */}
+          <div style={{ borderRadius: '20px', background: T.card, border: `1px solid ${T.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', boxShadow: T.shadow, position: 'sticky', top: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingBottom: '14px', borderBottom: `1px solid ${T.border}` }}>
+              <DevAvatar src={selectedDev.avatar} name={selectedDev.name} size={52} />
               <div>
-                <h3 className="text-base font-black text-white">{selectedDev.name}</h3>
-                <span className="text-xs text-cyan-400 font-mono tracking-wider font-bold">{selectedDev.role}</span>
+                <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.text, margin: 0 }}>{selectedDev.name}</h3>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#6366f1', fontFamily: 'monospace' }}>{selectedDev.role}</span>
               </div>
             </div>
 
-            {/* Individual Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
-                <span className="text-[10px] text-slate-500 font-mono uppercase block mb-1.5 font-bold">Completed Issues</span>
-                <span className="text-xl font-black font-mono text-emerald-400 flex items-center justify-center gap-1.5">
-                  <CheckCircle2 className="w-5 h-5" />
+            {/* Individual Stats */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ padding: '12px', borderRadius: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc', border: `1px solid ${T.border}`, textAlign: 'center' }}>
+                <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase' }}>Done Issues</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#10b981', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <CheckCircle2 size={16} />
                   {selectedDev.completedIssuesCount}
-                </span>
+                </div>
               </div>
-
-              <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-center">
-                <span className="text-[10px] text-slate-500 font-mono uppercase block mb-1.5 font-bold">Defect Density</span>
-                <span className="text-xl font-black font-mono text-amber-400 flex items-center justify-center gap-1.5">
-                  <Bug className="w-5 h-5" />
+              <div style={{ padding: '12px', borderRadius: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc', border: `1px solid ${T.border}`, textAlign: 'center' }}>
+                <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.textFaint, textTransform: 'uppercase' }}>Defect Density</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: '#f59e0b', marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Bug size={16} />
                   {selectedDev.defectDensity}
-                </span>
+                </div>
               </div>
             </div>
 
-            {/* Active Tickets list */}
-            <div className="space-y-4 flex-1">
-              <h4 className="text-xs font-bold text-slate-300 flex items-center gap-2 uppercase font-mono tracking-wider">
-                <ListTodo className="w-4 h-4 text-violet-400" />
-                Active Tickets ({devIssues.length})
-              </h4>
+            {/* Active Tickets List */}
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: T.text, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <ListTodo size={14} style={{ color: '#6366f1' }} />
+                Active Sprint Tickets ({devIssues.length})
+              </span>
 
-              <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '280px', overflowY: 'auto' }}>
                 {devIssues.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic text-center py-10">
+                  <div style={{ padding: '24px', textAlign: 'center', color: T.textFaint, fontSize: '11px', fontFamily: 'monospace', border: `1px dashed ${T.border}`, borderRadius: '12px' }}>
                     No active tickets in Sprint {activeSprintId}.
-                  </p>
+                  </div>
                 ) : (
                   devIssues.map((issue: any) => {
                     const epic = epics.find((e: any) => e.id === issue.epicId);
                     return (
-                      <div
-                        key={issue.id}
-                        className="p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 flex flex-col gap-2 transition duration-300 group"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-mono text-cyan-400 font-bold">{issue.id}</span>
-                          <span className={`px-2 py-0.5 rounded border text-[8px] font-bold font-mono ${getPriorityStyle(issue.priority)}`}>
-                            {issue.priority}
-                          </span>
+                      <div key={issue.id} style={{ padding: '10px 12px', borderRadius: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : '#f8fafc', border: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 800, color: '#2dd4bf' }}>{issue.id}</span>
+                          <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '4px', background: 'rgba(99,102,241,0.1)', color: '#6366f1' }}>{issue.priority}</span>
                         </div>
-                        <h5 className="text-xs font-bold text-slate-200 group-hover:text-white transition line-clamp-2 leading-snug">
-                          {issue.title}
-                        </h5>
-                        <div className="flex items-center justify-between text-[9px] mt-1 border-t border-white/5 pt-2">
-                          <span className="text-slate-500 font-bold truncate max-w-[140px]">{epic?.name}</span>
-                          <span className="px-2 py-0.5 bg-slate-900 border border-white/5 rounded font-mono font-bold text-slate-400">
-                            {issue.storyPoints} SP
-                          </span>
+                        <h5 style={{ fontSize: '11px', fontWeight: 700, color: T.text, margin: 0, lineHeight: 1.4 }}>{issue.title}</h5>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', marginTop: '2px' }}>
+                          <span style={{ color: T.textMuted }}>{epic?.name || '—'}</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 800, color: T.text }}>{issue.storyPoints} SP</span>
                         </div>
                       </div>
                     );
@@ -253,55 +517,51 @@ export default function DeveloperInsights() {
                 )}
               </div>
             </div>
+
           </div>
+
         </div>
 
-        {/* Section 2: Comparative Bar Chart */}
-        <div className="bg-glass rounded-2xl p-7 flex flex-col gap-5">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Activity className="w-5 h-5 text-cyan-400" />
-            Team Workload & Capacity Audit
-          </h3>
+        {/* ── COMPARATIVE CHART ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ padding: '24px', borderRadius: '20px', background: T.card, border: `1px solid ${T.border}`, boxShadow: T.shadow, display: 'flex', flexDirection: 'column', gap: '16px' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: T.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Activity size={16} style={{ color: '#2dd4bf' }} />
+                Team Workload vs Capacity Audit
+              </span>
+              <p style={{ fontSize: '11px', color: T.textMuted, margin: '2px 0 0' }}>Story point commitment vs max allocated capacity</p>
+            </div>
+          </div>
 
-          <div className="h-72 w-full">
+          <div style={{ height: '240px', width: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={comparisonChartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis dataKey="name" stroke="#475569" fontSize={10} tickLine={false} />
-                <YAxis stroke="#475569" fontSize={10} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'} vertical={false} />
+                <XAxis dataKey="name" stroke={T.textFaint} fontSize={10} tickLine={false} />
+                <YAxis stroke={T.textFaint} fontSize={10} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: isDark ? 'rgba(15, 23, 42, 0.95)' : '#ffffff',
+                    border: `1px solid ${T.border}`,
                     borderRadius: '12px',
                     fontSize: '11px',
-                    color: '#f3f4f6',
+                    color: T.text,
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
                   }}
                 />
-                <Bar
-                  dataKey="Capacity"
-                  name="Capacity SP"
-                  fill="#475569"
-                  radius={[5, 5, 0, 0]}
-                  opacity={0.6}
-                  isAnimationActive={true}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                />
-                <Bar
-                  dataKey="Commitment"
-                  name="Commitment SP"
-                  fill="#8b5cf6"
-                  radius={[5, 5, 0, 0]}
-                  isAnimationActive={true}
-                  animationDuration={1500}
-                  animationEasing="ease-out"
-                />
+                <Bar dataKey="Capacity" name="Capacity SP" fill={isDark ? '#334155' : '#cbd5e1'} radius={[6, 6, 0, 0]} isAnimationActive animationDuration={1400} />
+                <Bar dataKey="Commitment" name="Commitment SP" fill="#8b5cf6" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={1600} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+
+      </div>
     </DashboardLayout>
   );
 }
