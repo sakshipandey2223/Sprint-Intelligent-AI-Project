@@ -110,7 +110,7 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
 
   return (
     <>
-      {/* Click Anywhere Outside Overlay */}
+      {/* Backdrop Overlay (Click anywhere outside to close) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -119,79 +119,85 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.55)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 1000,
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(6px)',
+          zIndex: 99998,
           cursor: 'pointer',
-        }}
-      />
-
-      {/* Floating Side Panel starting cleanly from top with full internal scrolling */}
-      <motion.div
-        ref={drawerRef}
-        initial={{ x: '100%', opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '100%', opacity: 0 }}
-        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          bottom: '20px',
-          width: 'calc(100% - 40px)',
-          maxWidth: '460px',
-          maxHeight: 'calc(100vh - 40px)',
-          zIndex: 1001,
-          background: isDark ? '#0f172a' : '#ffffff',
-          border: `1px solid ${T.border}`,
-          borderRadius: '24px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden'
-        }}
-      >
-        {/* Fixed Top Header (Never Hidden) */}
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: `1px solid ${T.border}`,
-          background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(248, 250, 252, 0.95)',
-          backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0,
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <DevAvatar src={dev.avatar} name={dev.name} size={48} />
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 900, color: T.text, margin: 0 }}>{dev.name}</h3>
-                {isOverloaded && (
-                  <span style={{ fontSize: '9px', fontWeight: 800, padding: '2px 7px', borderRadius: '99px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'monospace' }}>
-                    OVERLOADED
-                  </span>
-                )}
+          justifyContent: 'center',
+          padding: '20px',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Modal Window (Stop propagation so clicking inside doesn't close) */}
+        <motion.div
+          ref={drawerRef}
+          initial={{ scale: 0.92, opacity: 0, y: 15 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.92, opacity: 0, y: 15 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '100%',
+            maxWidth: '520px',
+            maxHeight: '85vh',
+            background: isDark ? '#0f172a' : '#ffffff',
+            border: `1px solid ${T.border}`,
+            borderRadius: '24px',
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            cursor: 'default',
+            zIndex: 99999,
+          }}
+        >
+          {/* Prominent Header (Generous padding, 100% visible, never cut off) */}
+          <div style={{
+            padding: '24px 28px',
+            borderBottom: `1px solid ${T.border}`,
+            background: isDark ? 'rgba(255, 255, 255, 0.02)' : '#f8fafc',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <DevAvatar src={dev.avatar} name={dev.name} size={54} />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: T.text, margin: 0, lineHeight: 1.2 }}>{dev.name}</h3>
+                  {isOverloaded && (
+                    <span style={{ fontSize: '9px', fontWeight: 800, padding: '3px 8px', borderRadius: '99px', background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', fontFamily: 'monospace' }}>
+                      OVERLOADED
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: mainColor, fontFamily: 'monospace', display: 'block', marginTop: '4px' }}>
+                  {dev.role}
+                </span>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: mainColor, fontFamily: 'monospace', display: 'block', marginTop: '2px' }}>
-                {dev.role}
-              </span>
             </div>
+            <button
+              onClick={onClose}
+              title="Close (Esc)"
+              style={{
+                width: '36px', height: '36px', borderRadius: '12px',
+                border: `1px solid ${T.border}`,
+                background: isDark ? 'rgba(255,255,255,0.05)' : '#ffffff',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: T.textMuted, flexShrink: 0,
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <X size={18} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            title="Close (Esc)"
-            style={{ width: '32px', height: '32px', borderRadius: '10px', border: `1px solid ${T.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.textMuted }}
-          >
-            <X size={16} />
-          </button>
-        </div>
 
-        {/* Dedicated Scrollable Panel Body */}
-        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '20px', WebkitOverflowScrolling: 'touch' }}>
+          {/* Scrollable Body */}
+          <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '20px', WebkitOverflowScrolling: 'touch' }}>
           
           {/* Key Metrics Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -284,8 +290,9 @@ function DevDetailDrawer({ dev, issues, epics, isDark, T, onClose }: {
 
         </div>
       </motion.div>
-    </>
-  );
+    </motion.div>
+  </>
+);
 }
 
 /* ════════════════════════ MAIN COMPONENT ════════════════════════ */
